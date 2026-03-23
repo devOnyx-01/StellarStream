@@ -19,7 +19,7 @@ model Stream {
   sender       String
   receiver     String
   tokenAddress String?
-  amount       String // Store as string to handle large numbers safely if needed, or BigInt
+  amount       String // Store as string to handle large numbers safely
   duration     Int?
   status       StreamStatus @default(ACTIVE)
   withdrawn    String?      @default("0")
@@ -56,7 +56,7 @@ model EventLog {
   sender         String?
   receiver       String?
   amount         BigInt?
-  metadata       String? // JSON string for additional event data
+  metadata       String? // JSON string
   createdAt      DateTime @default(now())
 
   @@index([streamId])
@@ -75,7 +75,7 @@ model StreamSnapshot {
   amountPerSecond BigInt
   totalAmount     BigInt
   status          StreamStatus
-  snapshotMonth   String // Format: YYYY-MM
+  snapshotMonth   String // YYYY-MM
   createdAt       DateTime     @default(now())
 
   @@unique([streamId, snapshotMonth])
@@ -102,6 +102,47 @@ model StreamArchive {
   @@index([createdAt])
 }
 
+// Generic bridge activity log for cross-chain operations
+model BridgeLog {
+  id          String    @id @default(cuid())
+  bridge      String
+  eventType   String
+  sourceChain String
+  targetChain String
+  sourceAsset String
+  targetAsset String?
+  amount      String
+  sender      String?
+  recipient   String
+  txHash      String    @unique
+  status      String
+  payload     String? // Raw bridge payload (JSON)
+  landedAt    DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([eventType])
+  @@index([targetChain])
+  @@index([recipient])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Governance proposal state indexed from DAO contract events
+model Proposal {
+  id           String   @id // Contract-level proposal ID
+  creator      String
+  description  String
+  quorum       Int
+  votesFor     Int      @default(0)
+  votesAgainst Int      @default(0)
+  txHash       String   @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([creator])
+  @@index([createdAt])
+}
+
 enum StreamStatus {
   ACTIVE
   PAUSED
@@ -109,7 +150,7 @@ enum StreamStatus {
   CANCELED
 }
 
-// Stores ledger hashes for integrity verification against Horizon API
+// Stores ledger hashes for integrity verification
 model LedgerHash {
   sequence  Int      @id
   hash      String

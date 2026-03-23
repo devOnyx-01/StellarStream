@@ -191,6 +191,36 @@ exports.Prisma.StreamArchiveScalarFieldEnum = {
   archivedAt: 'archivedAt'
 };
 
+exports.Prisma.BridgeLogScalarFieldEnum = {
+  id: 'id',
+  bridge: 'bridge',
+  eventType: 'eventType',
+  sourceChain: 'sourceChain',
+  targetChain: 'targetChain',
+  sourceAsset: 'sourceAsset',
+  targetAsset: 'targetAsset',
+  amount: 'amount',
+  sender: 'sender',
+  recipient: 'recipient',
+  txHash: 'txHash',
+  status: 'status',
+  payload: 'payload',
+  landedAt: 'landedAt',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.ProposalScalarFieldEnum = {
+  id: 'id',
+  creator: 'creator',
+  description: 'description',
+  quorum: 'quorum',
+  votesFor: 'votesFor',
+  votesAgainst: 'votesAgainst',
+  txHash: 'txHash',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.LedgerHashScalarFieldEnum = {
   sequence: 'sequence',
   hash: 'hash',
@@ -224,7 +254,9 @@ exports.Prisma.ModelName = {
   SyncState: 'SyncState',
   EventLog: 'EventLog',
   StreamSnapshot: 'StreamSnapshot',
-  StreamArchive: 'StreamArchive'
+  StreamArchive: 'StreamArchive',
+  BridgeLog: 'BridgeLog',
+  Proposal: 'Proposal',
   LedgerHash: 'LedgerHash'
 };
 
