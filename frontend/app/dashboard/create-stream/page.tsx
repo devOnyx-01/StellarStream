@@ -8,6 +8,10 @@ interface FormData {
   asset: string;
   recipientAddress: string;
   recipientLabel: string;
+  // Stream Splitter (Issue #55)
+  splitEnabled: boolean;
+  splitAddress: string;
+  splitPercent: number; // 0–50
   // Step 2
   totalAmount: string;
   rateType: "per-second" | "per-minute" | "per-hour" | "per-day";
@@ -22,6 +26,9 @@ const INITIAL_FORM: FormData = {
   asset: "",
   recipientAddress: "",
   recipientLabel: "",
+  splitEnabled: false,
+  splitAddress: "",
+  splitPercent: 10,
   totalAmount: "",
   rateType: "per-hour",
   durationPreset: "1 Month",
@@ -32,41 +39,41 @@ const INITIAL_FORM: FormData = {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ASSETS = [
-  { symbol: "USDC", name: "USD Coin",      icon: "◎", color: "#2775CA" },
-  { symbol: "USDT", name: "Tether USD",    icon: "₮", color: "#26A17B" },
-  { symbol: "DAI",  name: "Dai Stablecoin",icon: "◈", color: "#F5AC37" },
-  { symbol: "ETH",  name: "Ethereum",      icon: "Ξ", color: "#627EEA" },
-  { symbol: "WBTC", name: "Wrapped BTC",   icon: "₿", color: "#F7931A" },
-  { symbol: "STRK", name: "Starknet",      icon: "★", color: "#EC796B" },
+  { symbol: "USDC", name: "USD Coin", icon: "◎", color: "#2775CA" },
+  { symbol: "USDT", name: "Tether USD", icon: "₮", color: "#26A17B" },
+  { symbol: "DAI", name: "Dai Stablecoin", icon: "◈", color: "#F5AC37" },
+  { symbol: "ETH", name: "Ethereum", icon: "Ξ", color: "#627EEA" },
+  { symbol: "WBTC", name: "Wrapped BTC", icon: "₿", color: "#F7931A" },
+  { symbol: "STRK", name: "Starknet", icon: "★", color: "#EC796B" },
 ];
 
 const DURATION_PRESETS = [
-  { label: "1 Hour",   seconds: 3_600 },
-  { label: "1 Day",    seconds: 86_400 },
-  { label: "1 Week",   seconds: 604_800 },
-  { label: "1 Month",  seconds: 2_592_000 },
+  { label: "1 Hour", seconds: 3_600 },
+  { label: "1 Day", seconds: 86_400 },
+  { label: "1 Week", seconds: 604_800 },
+  { label: "1 Month", seconds: 2_592_000 },
   { label: "3 Months", seconds: 7_776_000 },
-  { label: "1 Year",   seconds: 31_536_000 },
+  { label: "1 Year", seconds: 31_536_000 },
 ];
 
 const RATE_LABELS: Record<FormData["rateType"], string> = {
   "per-second": "/ sec",
   "per-minute": "/ min",
-  "per-hour":   "/ hr",
-  "per-day":    "/ day",
+  "per-hour": "/ hr",
+  "per-day": "/ day",
 };
 
 const RATE_SECONDS: Record<FormData["rateType"], number> = {
   "per-second": 1,
   "per-minute": 60,
-  "per-hour":   3600,
-  "per-day":    86400,
+  "per-hour": 3600,
+  "per-day": 86400,
 };
 
 const STEPS = [
   { number: 1, label: "Asset & Recipient", short: "Asset" },
-  { number: 2, label: "Rate & Duration",   short: "Rate"  },
-  { number: 3, label: "Review & Sign",     short: "Sign"  },
+  { number: 2, label: "Rate & Duration", short: "Rate" },
+  { number: 3, label: "Review & Sign", short: "Sign" },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -77,10 +84,10 @@ const fmtDate = (d: Date) =>
   d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
 const fmtDuration = (seconds: number): string => {
-  if (seconds < 3600)     return `${Math.round(seconds / 60)}m`;
-  if (seconds < 86400)    return `${Math.round(seconds / 3600)}h`;
-  if (seconds < 604800)   return `${Math.round(seconds / 86400)}d`;
-  if (seconds < 2592000)  return `${Math.round(seconds / 604800)}w`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+  if (seconds < 86400) return `${Math.round(seconds / 3600)}h`;
+  if (seconds < 604800) return `${Math.round(seconds / 86400)}d`;
+  if (seconds < 2592000) return `${Math.round(seconds / 604800)}w`;
   if (seconds < 31536000) return `${Math.round(seconds / 2592000)}mo`;
   return `${(seconds / 31536000).toFixed(1)}yr`;
 };
@@ -115,8 +122,8 @@ function ProgressPill({ step }: { step: number }) {
   return (
     <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] p-1 backdrop-blur-xl">
       {STEPS.map((s, i) => {
-        const done    = step > s.number;
-        const active  = step === s.number;
+        const done = step > s.number;
+        const active = step === s.number;
         return (
           <div key={s.number} className="flex items-center gap-1">
             {/* Connector */}
@@ -132,13 +139,12 @@ function ProgressPill({ step }: { step: number }) {
             )}
             {/* Pill segment */}
             <div
-              className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-all duration-300 ${
-                active
+              className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-all duration-300 ${active
                   ? "bg-cyan-400 text-black"
                   : done
-                  ? "bg-cyan-400/20 text-cyan-400"
-                  : "text-white/30"
-              }`}
+                    ? "bg-cyan-400/20 text-cyan-400"
+                    : "text-white/30"
+                }`}
               style={active ? { boxShadow: "0 0 16px rgba(34,211,238,0.5)" } : undefined}
             >
               <span className="font-body text-[10px] font-bold tracking-wider">
@@ -174,8 +180,8 @@ function SlidePanel({
           direction === "enter"
             ? "slideInRight 0.38s cubic-bezier(0.16,1,0.3,1) forwards"
             : direction === "exit-left"
-            ? "slideOutLeft 0.28s cubic-bezier(0.4,0,1,1) forwards"
-            : "none",
+              ? "slideOutLeft 0.28s cubic-bezier(0.4,0,1,1) forwards"
+              : "none",
       }}
     >
       {children}
@@ -228,7 +234,7 @@ function GlassInput({
       className={`flex items-center gap-2 rounded-2xl border bg-white/[0.03] px-4 py-3 transition-all duration-200 ${className}`}
       style={{
         borderColor: focused ? "rgba(34,211,238,0.4)" : "rgba(255,255,255,0.10)",
-        boxShadow:   focused ? "0 0 0 1px rgba(34,211,238,0.15), 0 0 24px rgba(34,211,238,0.08)" : "none",
+        boxShadow: focused ? "0 0 0 1px rgba(34,211,238,0.15), 0 0 24px rgba(34,211,238,0.08)" : "none",
       }}
     >
       {prefix && <span className="text-white/30 font-body text-sm flex-shrink-0">{prefix}</span>}
@@ -243,6 +249,253 @@ function GlassInput({
         style={{ caretColor: "#22d3ee" }}
       />
       {suffix && <span className="text-white/40 font-body text-xs flex-shrink-0">{suffix}</span>}
+    </div>
+  );
+}
+
+// ─── Stellar address validator ────────────────────────────────────────────────
+// A valid Stellar address starts with G, is 56 chars, and is base32 (A-Z2-7)
+function isValidStellarAddress(addr: string): boolean {
+  return /^G[A-Z2-7]{55}$/.test(addr.trim());
+}
+
+// ─── Stream Splitter UI ───────────────────────────────────────────────────────
+function StreamSplitter({
+  form,
+  update,
+}: {
+  form: FormData;
+  update: (patch: Partial<FormData>) => void;
+}) {
+  const [focused, setFocused] = useState(false);
+
+  const addressDirty = form.splitAddress.length > 0;
+  const addressValid = isValidStellarAddress(form.splitAddress);
+  const addressError = addressDirty && !addressValid;
+
+  return (
+    <div className="space-y-3">
+      {/* Toggle row */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="font-body text-[10px] tracking-[0.12em] text-white/50 uppercase">
+            Split Stream
+          </p>
+          <p className="font-body text-xs text-white/30 mt-0.5">
+            Route a portion to a second wallet
+          </p>
+        </div>
+        {/* Toggle switch */}
+        <button
+          type="button"
+          role="switch"
+          aria-checked={form.splitEnabled}
+          onClick={() => update({ splitEnabled: !form.splitEnabled })}
+          className="relative h-6 w-11 rounded-full border transition-all duration-300 focus:outline-none"
+          style={{
+            background: form.splitEnabled
+              ? "linear-gradient(135deg, rgba(34,211,238,0.3), rgba(99,102,241,0.3))"
+              : "rgba(255,255,255,0.06)",
+            borderColor: form.splitEnabled
+              ? "rgba(34,211,238,0.5)"
+              : "rgba(255,255,255,0.12)",
+            boxShadow: form.splitEnabled
+              ? "0 0 12px rgba(34,211,238,0.2)"
+              : "none",
+          }}
+        >
+          <span
+            className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full transition-all duration-300"
+            style={{
+              background: form.splitEnabled
+                ? "linear-gradient(135deg, #22d3ee, #6366f1)"
+                : "rgba(255,255,255,0.25)",
+              transform: form.splitEnabled ? "translateX(20px)" : "translateX(0)",
+              boxShadow: form.splitEnabled ? "0 0 8px rgba(34,211,238,0.5)" : "none",
+            }}
+          />
+        </button>
+      </div>
+
+      {/* Expanded panel */}
+      {form.splitEnabled && (
+        <div
+          className="rounded-2xl border border-cyan-400/15 bg-cyan-400/[0.03] p-4 space-y-4"
+          style={{ animation: "splitExpand 0.25s cubic-bezier(0.16,1,0.3,1)" }}
+        >
+          <style>{`
+            @keyframes splitExpand {
+              from { opacity: 0; transform: translateY(-6px) scaleY(0.95); }
+              to   { opacity: 1; transform: translateY(0)   scaleY(1);    }
+            }
+          `}</style>
+
+          {/* Split percentage slider */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="font-body text-[10px] tracking-[0.1em] text-white/40 uppercase">
+                Split Percentage
+              </p>
+              <div className="flex items-baseline gap-1">
+                <span
+                  className="font-heading text-2xl tabular-nums"
+                  style={{ color: "#22d3ee", textShadow: "0 0 12px rgba(34,211,238,0.4)" }}
+                >
+                  {form.splitPercent}
+                </span>
+                <span className="font-body text-xs text-white/40">%</span>
+              </div>
+            </div>
+
+            {/* Custom slider */}
+            <div className="relative py-2">
+              <div
+                className="absolute top-1/2 left-0 right-0 h-1.5 -translate-y-1/2 rounded-full overflow-hidden"
+                style={{ background: "rgba(255,255,255,0.06)" }}
+              >
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${(form.splitPercent / 50) * 100}%`,
+                    background: "linear-gradient(90deg, #22d3ee, #6366f1)",
+                    boxShadow: "0 0 8px rgba(34,211,238,0.4)",
+                  }}
+                />
+              </div>
+              <input
+                type="range"
+                min={1}
+                max={50}
+                step={1}
+                value={form.splitPercent}
+                onChange={(e) => update({ splitPercent: Number(e.target.value) })}
+                className="relative w-full appearance-none bg-transparent cursor-pointer"
+                style={{ height: "24px" }}
+              />
+              <style>{`
+                input[type=range]::-webkit-slider-thumb {
+                  -webkit-appearance: none;
+                  width: 18px; height: 18px;
+                  border-radius: 50%;
+                  background: linear-gradient(135deg, #22d3ee, #6366f1);
+                  border: 2px solid rgba(255,255,255,0.9);
+                  box-shadow: 0 0 10px rgba(34,211,238,0.5);
+                  cursor: pointer;
+                }
+                input[type=range]::-moz-range-thumb {
+                  width: 18px; height: 18px;
+                  border-radius: 50%;
+                  background: linear-gradient(135deg, #22d3ee, #6366f1);
+                  border: 2px solid rgba(255,255,255,0.9);
+                  box-shadow: 0 0 10px rgba(34,211,238,0.5);
+                  cursor: pointer;
+                }
+              `}</style>
+            </div>
+
+            {/* Tick marks */}
+            <div className="flex justify-between">
+              {[0, 10, 20, 30, 40, 50].map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => update({ splitPercent: v === 0 ? 1 : v })}
+                  className="font-body text-[9px] text-white/25 hover:text-cyan-400/70 transition-colors tabular-nums"
+                >
+                  {v}%
+                </button>
+              ))}
+            </div>
+
+            {/* Split preview mini-bar */}
+            {form.splitPercent > 0 && (
+              <div className="flex items-center gap-2 pt-1">
+                <div className="flex-1 h-1.5 rounded-full overflow-hidden flex">
+                  <div
+                    className="h-full rounded-l-full"
+                    style={{
+                      width: `${100 - form.splitPercent}%`,
+                      background: "rgba(34,211,238,0.35)",
+                    }}
+                  />
+                  <div
+                    className="h-full rounded-r-full"
+                    style={{
+                      width: `${form.splitPercent}%`,
+                      background: "linear-gradient(90deg,#6366f1,#8b5cf6)",
+                    }}
+                  />
+                </div>
+                <div className="flex items-center gap-2 text-[9px] font-body flex-shrink-0">
+                  <span className="text-cyan-400/70">
+                    {100 - form.splitPercent}% primary
+                  </span>
+                  <span className="text-white/20">·</span>
+                  <span className="text-indigo-400/70">
+                    {form.splitPercent}% split
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Split address input */}
+          <div className="space-y-1.5">
+            <p className="font-body text-[10px] tracking-[0.1em] text-white/40 uppercase">
+              Split Recipient Address
+            </p>
+            <div
+              className="flex items-center gap-2 rounded-2xl border bg-white/[0.03] px-4 py-3 transition-all duration-200"
+              style={{
+                borderColor: addressError
+                  ? "rgba(248,113,113,0.5)"
+                  : addressValid
+                    ? "rgba(34,211,238,0.4)"
+                    : focused
+                      ? "rgba(34,211,238,0.3)"
+                      : "rgba(255,255,255,0.10)",
+                boxShadow: addressError
+                  ? "0 0 0 1px rgba(248,113,113,0.15)"
+                  : addressValid
+                    ? "0 0 0 1px rgba(34,211,238,0.1), 0 0 16px rgba(34,211,238,0.06)"
+                    : "none",
+              }}
+            >
+              <span className="text-white/25 font-body text-sm flex-shrink-0">G</span>
+              <input
+                type="text"
+                value={form.splitAddress.startsWith("G") ? form.splitAddress.slice(1) : form.splitAddress}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/\s/g, "");
+                  update({ splitAddress: raw ? `G${raw}` : "" });
+                }}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
+                placeholder="…56-character Stellar address"
+                maxLength={55}
+                className="flex-1 bg-transparent font-body text-sm text-white/90 outline-none placeholder:text-white/15 font-mono"
+                style={{ caretColor: "#22d3ee", letterSpacing: "0.02em" }}
+              />
+              {addressValid && (
+                <span className="text-cyan-400 text-sm flex-shrink-0">✓</span>
+              )}
+              {addressError && (
+                <span className="text-red-400 text-sm flex-shrink-0">✗</span>
+              )}
+            </div>
+            {addressError && (
+              <p className="font-body text-xs text-red-400/80">
+                Must be a valid Stellar address starting with G (56 characters, A–Z and 2–7)
+              </p>
+            )}
+            {addressValid && (
+              <p className="font-body text-xs text-cyan-400/60">
+                Valid Stellar address ✓
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -265,11 +518,10 @@ function Step1({
               <button
                 key={a.symbol}
                 onClick={() => update({ asset: a.symbol })}
-                className={`relative flex flex-col items-center gap-2 rounded-2xl border p-3.5 transition-all duration-200 ${
-                  active
+                className={`relative flex flex-col items-center gap-2 rounded-2xl border p-3.5 transition-all duration-200 ${active
                     ? "border-cyan-400/50 bg-cyan-400/10"
                     : "border-white/8 bg-white/[0.02] hover:border-white/15 hover:bg-white/[0.04]"
-                }`}
+                  }`}
                 style={active ? { boxShadow: "0 0 20px rgba(34,211,238,0.18), inset 0 0 20px rgba(34,211,238,0.04)" } : undefined}
               >
                 <span
@@ -312,6 +564,10 @@ function Step1({
           prefix="🏷"
         />
       </Field>
+
+      <div className="h-px bg-white/[0.06]" />
+
+      <StreamSplitter form={form} update={update} />
     </div>
   );
 }
@@ -328,9 +584,9 @@ function Step2({
     DURATION_PRESETS.find((p) => p.label === form.durationPreset)?.seconds ??
     (form.customEndDate ? Math.floor((form.customEndDate.getTime() - Date.now()) / 1000) : 0);
 
-  const ratePerSec  = calcRatePerSecond(form.totalAmount, durationSeconds);
+  const ratePerSec = calcRatePerSecond(form.totalAmount, durationSeconds);
   const displayRate = calcDisplayRate(ratePerSec, form.rateType);
-  const endDate     = durationSeconds > 0 ? new Date(Date.now() + durationSeconds * 1000) : null;
+  const endDate = durationSeconds > 0 ? new Date(Date.now() + durationSeconds * 1000) : null;
 
   return (
     <div className="space-y-6">
@@ -360,17 +616,16 @@ function Step2({
       {/* Rate type selector */}
       <Field label="Displayed Rate">
         <div className="flex gap-2 flex-wrap">
-          {(["per-second","per-minute","per-hour","per-day"] as FormData["rateType"][]).map((r) => {
+          {(["per-second", "per-minute", "per-hour", "per-day"] as FormData["rateType"][]).map((r) => {
             const active = form.rateType === r;
             return (
               <button
                 key={r}
                 onClick={() => update({ rateType: r })}
-                className={`rounded-xl border px-3 py-1.5 font-body text-xs font-bold transition-all duration-200 ${
-                  active
+                className={`rounded-xl border px-3 py-1.5 font-body text-xs font-bold transition-all duration-200 ${active
                     ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-400"
                     : "border-white/10 bg-white/[0.03] text-white/40 hover:text-white/70"
-                }`}
+                  }`}
                 style={active ? { boxShadow: "0 0 10px rgba(34,211,238,0.2)" } : undefined}
               >
                 {RATE_LABELS[r]}
@@ -389,11 +644,10 @@ function Step2({
               <button
                 key={p.label}
                 onClick={() => update({ durationPreset: p.label, customEndDate: null })}
-                className={`rounded-xl border px-3 py-2 font-body text-sm font-bold transition-all duration-200 ${
-                  active
+                className={`rounded-xl border px-3 py-2 font-body text-sm font-bold transition-all duration-200 ${active
                     ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-400"
                     : "border-white/10 bg-white/[0.03] text-white/40 hover:text-white/70 hover:border-white/20"
-                }`}
+                  }`}
                 style={active ? { boxShadow: "0 0 12px rgba(34,211,238,0.2), inset 0 0 12px rgba(34,211,238,0.04)" } : undefined}
               >
                 {p.label}
@@ -413,9 +667,9 @@ function Step2({
           <p className="font-body text-[10px] tracking-widest text-white/35 uppercase">Stream Preview</p>
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: "Rate",     value: `${fmt(displayRate)} ${form.asset || "USDC"} ${RATE_LABELS[form.rateType]}` },
+              { label: "Rate", value: `${fmt(displayRate)} ${form.asset || "USDC"} ${RATE_LABELS[form.rateType]}` },
               { label: "Duration", value: fmtDuration(durationSeconds) },
-              { label: "Ends",     value: endDate ? fmtDate(endDate) : "—" },
+              { label: "Ends", value: endDate ? fmtDate(endDate) : "—" },
             ].map((row) => (
               <div key={row.label}>
                 <p className="font-body text-[10px] text-white/30 uppercase tracking-wider">{row.label}</p>
@@ -442,19 +696,25 @@ function Step3({
   const asset = ASSETS.find((a) => a.symbol === form.asset);
   const durationSeconds =
     DURATION_PRESETS.find((p) => p.label === form.durationPreset)?.seconds ?? 0;
-  const ratePerSec  = calcRatePerSecond(form.totalAmount, durationSeconds);
+  const ratePerSec = calcRatePerSecond(form.totalAmount, durationSeconds);
   const displayRate = calcDisplayRate(ratePerSec, form.rateType);
-  const endDate     = durationSeconds > 0 ? new Date(Date.now() + durationSeconds * 1000) : null;
+  const endDate = durationSeconds > 0 ? new Date(Date.now() + durationSeconds * 1000) : null;
 
   const rows = [
-    { label: "Asset",     value: `${asset?.icon ?? ""} ${form.asset}` },
-    { label: "Recipient", value: form.recipientLabel
+    { label: "Asset", value: `${asset?.icon ?? ""} ${form.asset}` },
+    {
+      label: "Recipient", value: form.recipientLabel
         ? `${form.recipientLabel} · ${form.recipientAddress.slice(0, 10)}…`
-        : `${form.recipientAddress.slice(0, 14)}…` },
-    { label: "Total",     value: `${fmt(parseFloat(form.totalAmount) || 0)} ${form.asset}` },
-    { label: "Rate",      value: `${fmt(displayRate)} ${form.asset} ${RATE_LABELS[form.rateType]}` },
-    { label: "Duration",  value: form.durationPreset },
-    { label: "End Date",  value: endDate ? fmtDate(endDate) : "—" },
+        : `${form.recipientAddress.slice(0, 14)}…`
+    },
+    { label: "Total", value: `${fmt(parseFloat(form.totalAmount) || 0)} ${form.asset}` },
+    { label: "Rate", value: `${fmt(displayRate)} ${form.asset} ${RATE_LABELS[form.rateType]}` },
+    { label: "Duration", value: form.durationPreset },
+    { label: "End Date", value: endDate ? fmtDate(endDate) : "—" },
+    ...(form.splitEnabled ? [
+      { label: "Split To", value: `${form.splitAddress.slice(0, 6)}…${form.splitAddress.slice(-4)}`, accent: true },
+      { label: "Split %", value: `${form.splitPercent}% → ${100 - form.splitPercent}% primary`, accent: true },
+    ] : []),
   ];
 
   return (
@@ -466,9 +726,23 @@ function Step3({
       {/* Review table */}
       <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] divide-y divide-white/[0.05] overflow-hidden">
         {rows.map((row) => (
-          <div key={row.label} className="flex items-center justify-between px-5 py-3.5">
-            <span className="font-body text-xs text-white/35 tracking-wider uppercase">{row.label}</span>
-            <span className="font-body text-sm font-bold text-white/85 tabular-nums text-right">{row.value}</span>
+          <div
+            key={row.label}
+            className="flex items-center justify-between px-5 py-3.5"
+            style={"accent" in row && row.accent ? { background: "rgba(99,102,241,0.06)" } : undefined}
+          >
+            <span
+              className="font-body text-xs tracking-wider uppercase"
+              style={"accent" in row && row.accent ? { color: "rgba(165,180,252,0.7)" } : { color: "rgba(255,255,255,0.35)" }}
+            >
+              {row.label}
+            </span>
+            <span
+              className="font-body text-sm font-bold tabular-nums text-right"
+              style={"accent" in row && row.accent ? { color: "rgba(165,180,252,0.9)" } : { color: "rgba(255,255,255,0.85)" }}
+            >
+              {row.value}
+            </span>
           </div>
         ))}
       </div>
@@ -492,8 +766,8 @@ function Step3({
         {signing ? (
           <span className="flex items-center justify-center gap-2">
             <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
             </svg>
             Awaiting Signature…
           </span>
@@ -550,7 +824,7 @@ function SuccessScreen({ form, onReset }: { form: FormData; onReset: () => void 
       <div className="flex gap-3 w-full">
         <button
           className="flex-1 rounded-2xl border border-white/10 bg-white/[0.03] py-3 font-body text-sm text-white/50 transition hover:bg-white/[0.06] hover:text-white/80"
-          onClick={() => {}}
+          onClick={() => { }}
         >
           View Stream →
         </button>
@@ -567,10 +841,10 @@ function SuccessScreen({ form, onReset }: { form: FormData; onReset: () => void 
 
 // ─── Main Wizard Page ─────────────────────────────────────────────────────────
 export default function CreateStreamPage() {
-  const [step,    setStep]    = useState(1);
+  const [step, setStep] = useState(1);
   const [prevStep, setPrevStep] = useState(1);
-  const [form,    setForm]    = useState<FormData>(INITIAL_FORM);
-  const [errors,  setErrors]  = useState<Record<string, string>>({});
+  const [form, setForm] = useState<FormData>(INITIAL_FORM);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [signing, setSigning] = useState(false);
   const [success, setSuccess] = useState(false);
   const [animKey, setAnimKey] = useState(0); // forces re-mount for animation
@@ -585,10 +859,16 @@ export default function CreateStreamPage() {
   const validateStep = (s: number): boolean => {
     const errs: Record<string, string> = {};
     if (s === 1) {
-      if (!form.asset)            errs.asset     = "Select an asset.";
+      if (!form.asset) errs.asset = "Select an asset.";
       if (!form.recipientAddress) errs.recipient = "Enter a recipient address.";
       else if (!form.recipientAddress.startsWith("0x") && !form.recipientAddress.endsWith(".eth"))
         errs.recipient = "Enter a valid address (0x…) or ENS name.";
+      if (form.splitEnabled) {
+        if (!form.splitAddress)
+          errs.split = "Enter a split recipient address.";
+        else if (!isValidStellarAddress(form.splitAddress))
+          errs.split = "Split address must be a valid Stellar G… address (56 characters).";
+      }
     }
     if (s === 2) {
       const n = parseFloat(form.totalAmount);
