@@ -23,7 +23,7 @@ const defaultPartnerLimiter = new RateLimiterRedis({
 });
 
 /** Returns a per-key limiter when the key has a custom rateLimit value. */
-function getPartnerLimiter(keyId: string, points: number): RateLimiterRedis {
+function getPartnerLimiter(_keyId: string, points: number): RateLimiterRedis {
   if (points === DEFAULT_PARTNER_POINTS) return defaultPartnerLimiter;
   return new RateLimiterRedis({
     storeClient: redis,

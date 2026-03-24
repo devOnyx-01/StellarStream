@@ -1,9 +1,23 @@
-import { PrismaClient } from '../generated/client/client.js';
 import { prisma as defaultPrisma } from '../lib/db.js';
 import { logger } from '../logger.js';
 
 export interface CleanupResult {
   updatedCount: number;
+}
+
+/**
+ * Minimal structural interface for the Prisma client methods this service needs.
+ * Using a structural type instead of the concrete PrismaClient class makes the
+ * service testable with lightweight mocks and decouples it from generated-client
+ * version differences.
+ */
+interface StreamDb {
+  stream: {
+    updateMany: (args: {
+      where: Record<string, unknown>;
+      data: Record<string, unknown>;
+    }) => Promise<{ count: number }>;
+  };
 }
 
 /**
@@ -13,9 +27,9 @@ export interface CleanupResult {
  * regardless of how many streams have expired.
  */
 export class StaleStreamCleanupService {
-  private readonly db: PrismaClient;
+  private readonly db: StreamDb;
 
-  constructor(db: PrismaClient = defaultPrisma) {
+  constructor(db: StreamDb = defaultPrisma as unknown as StreamDb) {
     this.db = db;
   }
 

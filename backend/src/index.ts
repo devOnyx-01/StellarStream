@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/node";
 import express, { Express, Request, Response } from "express";
+import compression from "compression";
 import { createServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import swaggerUi from "swagger-ui-express";

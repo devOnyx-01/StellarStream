@@ -19,6 +19,12 @@ export class SnapshotService {
       const streams = await prisma.stream.findMany();
       
       for (const stream of streams) {
+        // Derive amountPerSecond from amount / duration (both stored as strings/ints)
+        const totalAmount = BigInt(stream.amount ?? "0");
+        const durationSec = BigInt(stream.duration ?? 1);
+        const amountPerSecond = durationSec > 0n ? totalAmount / durationSec : 0n;
+        const tokenAddress = stream.tokenAddress ?? "";
+
         await prisma.streamSnapshot.upsert({
           where: {
             streamId_snapshotMonth: {
@@ -29,18 +35,18 @@ export class SnapshotService {
           update: {
             sender: stream.sender,
             receiver: stream.receiver,
-            tokenAddress: stream.tokenAddress,
-            amountPerSecond: stream.amountPerSecond,
-            totalAmount: stream.totalAmount,
+            tokenAddress,
+            amountPerSecond,
+            totalAmount,
             status: stream.status,
           },
           create: {
             streamId: stream.id,
             sender: stream.sender,
             receiver: stream.receiver,
-            tokenAddress: stream.tokenAddress,
-            amountPerSecond: stream.amountPerSecond,
-            totalAmount: stream.totalAmount,
+            tokenAddress,
+            amountPerSecond,
+            totalAmount,
             status: stream.status,
             snapshotMonth,
           },

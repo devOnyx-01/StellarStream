@@ -1,7 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { StaleStreamCleanupService } from "../services/stale-stream-cleanup.service.js";
-import { PrismaClient } from "../generated/client/client.js";
 
 // ═══════════════════════════════════════════════════════════════
 // Mock helpers
@@ -11,22 +10,22 @@ import { PrismaClient } from "../generated/client/client.js";
  * Builds a minimal Prisma-shaped stub with only the stream.updateMany
  * method, which is all StaleStreamCleanupService needs.
  */
-function createMockPrisma(updateManyCount: number): PrismaClient {
+function createMockPrisma(updateManyCount: number) {
   return {
     stream: {
       updateMany: async (_args: unknown) => ({ count: updateManyCount }),
     },
-  } as unknown as PrismaClient;
+  };
 }
 
-function createErrorPrisma(message: string): PrismaClient {
+function createErrorPrisma(message: string) {
   return {
     stream: {
       updateMany: async (_args: unknown) => {
         throw new Error(message);
       },
     },
-  } as unknown as PrismaClient;
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -65,7 +64,7 @@ describe("StaleStreamCleanupService", () => {
           return { count: 3 };
         },
       },
-    } as unknown as PrismaClient;
+    };
 
     const service = new StaleStreamCleanupService(mockPrisma);
     const before = new Date();

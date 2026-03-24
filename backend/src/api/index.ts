@@ -8,6 +8,7 @@ import streamsRouter from "./streams.routes";
 import yieldRouter from "./yield.routes.js";
 import snapshotRouter from "./snapshot.routes";
 import governanceRouter from "./governance.routes.js";
+import gasTankRouter from "./gas-tank.routes.js";
 
 const router = Router();
 
@@ -16,6 +17,7 @@ router.use("/", streamsRouter);
 router.use("/yield", yieldRouter);
 router.use("/snapshots", snapshotRouter);
 router.use("/", governanceRouter);
+router.use("/", gasTankRouter);
 
 const auditLogService = new AuditLogService();
 

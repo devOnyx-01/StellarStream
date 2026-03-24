@@ -5,20 +5,21 @@ import { toBigIntOrNull } from '../services/stream-lifecycle-service.js';
 const router = Router();
 const streamService = new StreamLifecycleService();
 
-router.post('/test-stream', async (req: Request, res: Response) => {
+router.post('/test-stream', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { streamId, sender, receiver, amount } = req.body;
+    const { streamId, sender, receiver, amount } = req.body as Record<string, unknown>;
     
     if (!streamId || !sender || !receiver || !amount) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      res.status(400).json({ error: 'Missing required fields' });
+      return;
     }
 
     await streamService.upsertCreatedStream({
-      streamId,
+      streamId: String(streamId),
       txHash: `test-tx-${Date.now()}`,
-      sender,
-      receiver,
-      totalAmount: toBigIntOrNull(amount) || 0n,
+      sender: String(sender),
+      receiver: String(receiver),
+      totalAmount: toBigIntOrNull(String(amount)) ?? 0n,
       createdAtIso: new Date().toISOString(),
       ledger: 12345
     });
@@ -30,17 +31,18 @@ router.post('/test-stream', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/test-withdrawal', async (req: Request, res: Response) => {
+router.post('/test-withdrawal', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { streamId, amount } = req.body;
+    const { streamId, amount } = req.body as Record<string, unknown>;
     
     if (!streamId || !amount) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      res.status(400).json({ error: 'Missing required fields' });
+      return;
     }
 
     await streamService.registerWithdrawal({
-      streamId,
-      amount: toBigIntOrNull(amount) || 0n,
+      streamId: String(streamId),
+      amount: toBigIntOrNull(String(amount)) ?? 0n,
       ledger: 12346
     });
 
@@ -51,18 +53,19 @@ router.post('/test-withdrawal', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/test-cancellation', async (req: Request, res: Response) => {
+router.post('/test-cancellation', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { streamId, toReceiver, toSender } = req.body;
+    const { streamId, toReceiver, toSender } = req.body as Record<string, unknown>;
     
     if (!streamId || !toReceiver || !toSender) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      res.status(400).json({ error: 'Missing required fields' });
+      return;
     }
 
     const summary = await streamService.cancelStream({
-      streamId,
-      toReceiver: toBigIntOrNull(toReceiver) || 0n,
-      toSender: toBigIntOrNull(toSender) || 0n,
+      streamId: String(streamId),
+      toReceiver: toBigIntOrNull(String(toReceiver)) ?? 0n,
+      toSender: toBigIntOrNull(String(toSender)) ?? 0n,
       closedAtIso: new Date().toISOString(),
       ledger: 12347
     });
