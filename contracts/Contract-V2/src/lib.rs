@@ -19,6 +19,12 @@ use v1_interface::Client as V1Client;
 #[contract]
 pub struct Contract;
 
+#[soroban_sdk::contractclient(name = "VaultClient")]
+pub trait VaultTrait {
+    fn deposit(env: Env, amount: i128);
+    fn withdraw(env: Env, amount: i128) -> i128; // returns actual amount withdrawn
+}
+
 #[contractimpl]
 impl Contract {
     // ----------------------------------------------------------------
@@ -182,6 +188,9 @@ impl Contract {
             v1_stream_id,
             step_duration: 0,
             multiplier_bps: 0,
+            vault_address: None, // Migrated streams don't use V2 vaults
+            yield_enabled: false,
+            is_pending: false,
         };
 
         storage::set_stream(&env, v2_stream_id, &v2_stream);
@@ -242,6 +251,23 @@ impl Contract {
             return Err(ContractError::NothingToMigrate); // TODO: Add NothingToWithdraw
         }
 
+        // If Yield-Bearing, withdraw principal from Vault
+        if stream.yield_enabled {
+            if let Some(vault_addr) = &stream.vault_address {
+                let vault_client = VaultClient::new(&env, vault_addr);
+                // Attempt to withdraw from vault, catching if it's paused/fails
+                let result = vault_client.try_withdraw(&to_withdraw);
+
+                if result.is_err() {
+                    stream.is_pending = true;
+                    storage::set_stream(&env, stream_id, &stream);
+                    // Return Ok(0) to persist the 'is_pending' state change.
+                    // Returning Err automatically rolls back state in Soroban.
+                    return Ok(0);
+                }
+            }
+        }
+
         // Perform transfer
         let token_client = soroban_sdk::token::TokenClient::new(&env, &stream.token);
         token_client.transfer(
@@ -252,6 +278,7 @@ impl Contract {
 
         // Update state
         stream.withdrawn_amount += to_withdraw;
+        stream.is_pending = false; // Successfully withdrawn, any previous pending status cleared
         storage::set_stream(&env, stream_id, &stream);
 
         // Update analytics (TVL decreased)
@@ -290,6 +317,21 @@ impl Contract {
         let unlocked = Self::calculate_unlocked_internal(&stream, now);
         let to_receiver = unlocked.saturating_sub(stream.withdrawn_amount);
         let to_sender = stream.total_amount.saturating_sub(unlocked);
+        let total_remaining = to_receiver + to_sender;
+
+        // If Yield-Bearing, withdraw total remaining from Vault
+        if stream.yield_enabled {
+            if let Some(vault_addr) = &stream.vault_address {
+                let vault_client = VaultClient::new(&env, vault_addr);
+                let result = vault_client.try_withdraw(&total_remaining);
+
+                if result.is_err() {
+                    stream.is_pending = true;
+                    storage::set_stream(&env, stream_id, &stream);
+                    return Err(ContractError::VaultPaused);
+                }
+            }
+        }
 
         stream.withdrawn_amount = unlocked;
         stream.cancelled = true;
@@ -614,6 +656,15 @@ impl Contract {
 
         let stream_id = storage::next_stream_id(&env);
 
+        let mut vault_used = None;
+        if args.yield_enabled {
+            if let Some(vault_addr) = &args.vault_address {
+                let vault_client = VaultClient::new(&env, vault_addr);
+                vault_client.deposit(&args.total_amount);
+                vault_used = Some(vault_addr.clone());
+            }
+        }
+
         let stream = StreamV2 {
             sender: args.sender.clone(),
             receiver: args.receiver.clone(),
@@ -628,6 +679,9 @@ impl Contract {
             v1_stream_id: 0,
             step_duration: args.step_duration,
             multiplier_bps: args.multiplier_bps,
+            vault_address: vault_used,
+            yield_enabled: args.yield_enabled,
+            is_pending: false,
         };
 
         storage::set_stream(&env, stream_id, &stream);
@@ -727,6 +781,9 @@ impl Contract {
             v1_stream_id: 0,
             step_duration: args.step_duration,
             multiplier_bps: args.multiplier_bps,
+            vault_address: None, // No vault support by permit yet
+            yield_enabled: false,
+            is_pending: false,
         };
 
         storage::set_stream(&env, stream_id, &stream);
@@ -824,6 +881,9 @@ impl Contract {
                 v1_stream_id: 0,
                 step_duration: args.step_duration,
                 multiplier_bps: args.multiplier_bps,
+                vault_address: None, // Batch creation default to no vault for now
+                yield_enabled: false,
+                is_pending: false,
             };
 
             storage::set_stream(&env, stream_id, &stream);

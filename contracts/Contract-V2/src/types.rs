@@ -16,6 +16,9 @@ pub struct StreamV2 {
     pub v1_stream_id: u64,
     pub step_duration: i128,
     pub multiplier_bps: i128,
+    pub vault_address: Option<Address>,
+    pub yield_enabled: bool,
+    pub is_pending: bool,
 }
 
 #[contracttype]
@@ -30,6 +33,8 @@ pub struct StreamArgs {
     pub end_time: u64,
     pub step_duration: i128,
     pub multiplier_bps: i128,
+    pub vault_address: Option<Address>,
+    pub yield_enabled: bool,
 }
 
 #[contracttype]
@@ -46,6 +51,8 @@ pub struct PermitArgs {
     pub deadline: u64,
     pub step_duration: i128,
     pub multiplier_bps: i128,
+    pub vault_address: Option<Address>,
+    pub yield_enabled: bool,
 }
 
 // ----------------------------------------------------------------

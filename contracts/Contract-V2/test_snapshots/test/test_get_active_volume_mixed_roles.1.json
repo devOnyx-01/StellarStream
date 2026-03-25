@@ -166,6 +166,20 @@
                           "lo": 200000000
                         }
                       }
+                    },
+                    {
+                      "key": {
+                        "symbol": "vault_address"
+                      },
+                      "val": "void"
+                    },
+                    {
+                      "key": {
+                        "symbol": "yield_enabled"
+                      },
+                      "val": {
+                        "bool": false
+                      }
                     }
                   ]
                 }
@@ -290,6 +304,20 @@
                           "hi": 0,
                           "lo": 200000000
                         }
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "vault_address"
+                      },
+                      "val": "void"
+                    },
+                    {
+                      "key": {
+                        "symbol": "yield_enabled"
+                      },
+                      "val": {
+                        "bool": false
                       }
                     }
                   ]
@@ -593,6 +621,14 @@
                     },
                     {
                       "key": {
+                        "symbol": "is_pending"
+                      },
+                      "val": {
+                        "bool": false
+                      }
+                    },
+                    {
+                      "key": {
                         "symbol": "migrated_from_v1"
                       },
                       "val": {
@@ -674,6 +710,12 @@
                     },
                     {
                       "key": {
+                        "symbol": "vault_address"
+                      },
+                      "val": "void"
+                    },
+                    {
+                      "key": {
                         "symbol": "withdrawn_amount"
                       },
                       "val": {
@@ -681,6 +723,14 @@
                           "hi": 0,
                           "lo": 0
                         }
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "yield_enabled"
+                      },
+                      "val": {
+                        "bool": false
                       }
                     }
                   ]
@@ -755,6 +805,14 @@
                     },
                     {
                       "key": {
+                        "symbol": "is_pending"
+                      },
+                      "val": {
+                        "bool": false
+                      }
+                    },
+                    {
+                      "key": {
                         "symbol": "migrated_from_v1"
                       },
                       "val": {
@@ -836,6 +894,12 @@
                     },
                     {
                       "key": {
+                        "symbol": "vault_address"
+                      },
+                      "val": "void"
+                    },
+                    {
+                      "key": {
                         "symbol": "withdrawn_amount"
                       },
                       "val": {
@@ -843,6 +907,14 @@
                           "hi": 0,
                           "lo": 0
                         }
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "yield_enabled"
+                      },
+                      "val": {
+                        "bool": false
                       }
                     }
                   ]

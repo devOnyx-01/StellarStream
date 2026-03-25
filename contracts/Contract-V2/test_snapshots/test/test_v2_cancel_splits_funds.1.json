@@ -141,6 +141,20 @@
                           "lo": 100000000
                         }
                       }
+                    },
+                    {
+                      "key": {
+                        "symbol": "vault_address"
+                      },
+                      "val": "void"
+                    },
+                    {
+                      "key": {
+                        "symbol": "yield_enabled"
+                      },
+                      "val": {
+                        "bool": false
+                      }
                     }
                   ]
                 }
@@ -433,6 +447,14 @@
                     },
                     {
                       "key": {
+                        "symbol": "is_pending"
+                      },
+                      "val": {
+                        "bool": false
+                      }
+                    },
+                    {
+                      "key": {
                         "symbol": "migrated_from_v1"
                       },
                       "val": {
@@ -514,6 +536,12 @@
                     },
                     {
                       "key": {
+                        "symbol": "vault_address"
+                      },
+                      "val": "void"
+                    },
+                    {
+                      "key": {
                         "symbol": "withdrawn_amount"
                       },
                       "val": {
@@ -521,6 +549,14 @@
                           "hi": 0,
                           "lo": 30000000
                         }
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "yield_enabled"
+                      },
+                      "val": {
+                        "bool": false
                       }
                     }
                   ]
