@@ -29,6 +29,9 @@ pub enum DataKeyV2 {
 
     // -- Analytics -----------------------------------------------
     UserSeen(Address), // 6
+
+    // -- Time-locked Admin Actions -------------------------------
+    ScheduledOp(crate::types::Operation), // 7
 }
 
 /// Global stream counter.
@@ -43,6 +46,9 @@ const INSTANCE_TTL_BUMP: u32 = 535_680; // ~31 days
 // Per-stream persistent TTL constants
 pub const STREAM_TTL_THRESHOLD: u32 = 518_400; // ~30 days — extend if below this
 pub const STREAM_TTL_BUMP: u32 = 2_073_600; // ~120 days — extend to this
+
+// 48-hour delay for administrative operations.
+pub const ADMIN_DELAY: u64 = 172_800; // 48h in seconds
 
 // ----------------------------------------------------------------
 // Backward-compat single-admin bootstrap (used by init)
@@ -284,4 +290,26 @@ pub fn get_min_value(env: &Env, asset: &Address) -> i128 {
         .instance()
         .get(&DataKeyV2::MinValue(asset.clone()))
         .unwrap_or(DEFAULT_MIN_VALUE)
+}
+
+// ----------------------------------------------------------------
+// Time-locked operations
+// ----------------------------------------------------------------
+
+pub fn schedule_op(env: &Env, op: &crate::types::Operation, execution_time: u64) {
+    env.storage()
+        .instance()
+        .set(&DataKeyV2::ScheduledOp(op.clone()), &execution_time);
+    bump_instance(env);
+}
+
+pub fn get_scheduled_op_time(env: &Env, op: &crate::types::Operation) -> Option<u64> {
+    env.storage()
+        .instance()
+        .get(&DataKeyV2::ScheduledOp(op.clone()))
+}
+
+pub fn clear_op(env: &Env, op: &crate::types::Operation) {
+    env.storage().instance().remove(&DataKeyV2::ScheduledOp(op.clone()));
+    bump_instance(env);
 }

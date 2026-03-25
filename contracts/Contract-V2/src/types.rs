@@ -173,3 +173,28 @@ pub struct ProtocolHealthV2 {
     pub active_v2_users: u32,
     pub total_v2_streams: u64,
 }
+
+// ----------------------------------------------------------------
+// Time-locked operations
+// ----------------------------------------------------------------
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub enum Operation {
+    SetAdmins(Vec<Address>, u32),
+    TransferAdmin(Address),
+    SetMinValue(Address, i128),
+}
+
+#[contracttype]
+#[derive(Clone, Debug)]
+pub struct OperationScheduledEvent {
+    pub op: Operation,
+    pub execution_time: u64,
+}
+
+#[contracttype]
+#[derive(Clone, Debug)]
+pub struct OperationExecutedEvent {
+    pub op: Operation,
+}

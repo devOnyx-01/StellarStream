@@ -23,4 +23,6 @@ pub enum Error {
     StreamAlreadyExists = 19,
     ContractNotInitialized = 20,
     AdminListNotSet = 21,
+    NotExecutionTime = 22,
+    OpNotScheduled = 23,
 }

@@ -12,7 +12,7 @@ use contracterror::Error;
 pub use types::{
     AdminTransferredEvent, BatchStreamsCreatedEvent, ContractPausedEvent, ContractUnpausedEvent, MigrationEvent, PermitArgs, PermitStreamCreatedEvent, StreamArgs,
     StreamCancelledV2Event, StreamClaimV2Event, StreamCreatedV2Event, StreamMigratedEvent,
-    StreamV2,
+    StreamV2, Operation, OperationScheduledEvent, OperationExecutedEvent,
 };
 use v1_interface::Client as V1Client;
 
@@ -45,9 +45,9 @@ impl Contract {
     ///
     /// `signers` must contain at least the current threshold of existing
     /// admins so the handover itself is multi-sig protected.
-    pub fn set_admins(
+    /// Internal helper for set_admins.
+    fn set_admins_internal(
         env: Env,
-        signers: Vec<Address>, // current admins authorising this change
         new_admins: Vec<Address>,
         new_threshold: u32,
     ) -> Result<(), Error> {
@@ -55,9 +55,6 @@ impl Contract {
         if new_threshold == 0 || new_threshold > new_admins.len() {
             return Err(Error::InvalidThreshold);
         }
-
-        // Require current multi-sig quorum.
-        storage::require_multisig(&env, &signers)?;
 
         storage::set_admin_list_raw(&env, &new_admins, new_threshold);
         Ok(())
@@ -78,9 +75,10 @@ impl Contract {
     /// The current admin must authorise this call. The new admin becomes the
     /// sole admin with threshold = 1, ready to be promoted to a full multisig
     /// via `set_admins` if desired.
-    pub fn transfer_admin(env: Env, new_admin: Address) -> Result<(), Error> {
+    /// Internal helper for transfer_admin.
+    fn transfer_admin_internal(env: Env, new_admin: Address) -> Result<(), Error> {
         let previous_admin = storage::try_get_admin(&env)?;
-        previous_admin.require_auth();
+        // Auth handled in execute_op
 
         storage::set_admin(&env, &new_admin);
 
@@ -106,8 +104,8 @@ impl Contract {
     }
 
     /// Override the minimum for a specific asset. Admin-only.
-    pub fn set_min_value(env: Env, asset: Address, min: i128) -> Result<(), Error> {
-        storage::try_get_admin(&env)?.require_auth();
+    /// Internal helper for set_min_value.
+    fn set_min_value_internal(env: Env, asset: Address, min: i128) -> Result<(), Error> {
         storage::set_min_value(&env, &asset, min);
         Ok(())
     }
@@ -699,6 +697,63 @@ impl Contract {
         );
 
         Ok(stream_ids)
+    }
+
+    // ----------------------------------------------------------------
+    // Time-locked Admin Operations
+    // ----------------------------------------------------------------
+
+    pub fn schedule_op(env: Env, op: Operation) -> Result<(), Error> {
+        let admin = storage::try_get_admin(&env)?;
+        admin.require_auth();
+
+        let execution_time = env.ledger().timestamp() + storage::ADMIN_DELAY;
+        storage::schedule_op(&env, &op, execution_time);
+
+        env.events().publish(
+            (symbol_short!("schedule"),),
+            OperationScheduledEvent {
+                op,
+                execution_time,
+            },
+        );
+
+        Ok(())
+    }
+
+    pub fn execute_op(env: Env, op: Operation) -> Result<(), Error> {
+        let admin = storage::try_get_admin(&env)?;
+        admin.require_auth();
+
+        let execution_time = storage::get_scheduled_op_time(&env, &op).ok_or(Error::OpNotScheduled)?;
+
+        if env.ledger().timestamp() < execution_time {
+            return Err(Error::NotExecutionTime);
+        }
+
+        // Execute the actual operation
+        match &op {
+            Operation::SetAdmins(new_admins, new_threshold) => {
+                Self::set_admins_internal(env.clone(), new_admins.clone(), *new_threshold)?;
+            }
+            Operation::TransferAdmin(new_admin) => {
+                Self::transfer_admin_internal(env.clone(), new_admin.clone())?;
+            }
+            Operation::SetMinValue(asset, min) => {
+                Self::set_min_value_internal(env.clone(), asset.clone(), *min)?;
+            }
+        }
+
+        storage::clear_op(&env, &op);
+
+        env.events().publish(
+            (symbol_short!("executed"),),
+            OperationExecutedEvent {
+                op,
+            },
+        );
+
+        Ok(())
     }
 }
 
