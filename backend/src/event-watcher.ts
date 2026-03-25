@@ -12,6 +12,7 @@ import {
 } from "./event-parser";
 import { scValToNative, xdr } from "@stellar/stellar-sdk";
 import { PrismaClient } from "./generated/client/index.js";
+import { computeEventHash } from "./lib/event-hash.js";
 import { LedgerVerificationService } from "./services/ledger-verification.service.js";
 import { AuditLogService } from "./services/audit-log.service";
 import {
@@ -322,7 +323,7 @@ export class EventWatcher {
           }
         }
 
-        await this.handleStreamCreated(event, eventData);
+        await this.handleStreamCreated(event, eventData, rawEvent);
         logger.info("Stream created event detected", {
           txHash: event.txHash,
           ledger: event.ledger,
@@ -420,7 +421,7 @@ export class EventWatcher {
 
       case "claim":
       case "stream_withdrawn":
-        await this.handleStreamWithdrawn(event, eventData);
+        await this.handleStreamWithdrawn(event, eventData, rawEvent);
         logger.info("Withdrawal event detected", {
           txHash: event.txHash,
           ledger: event.ledger,
@@ -496,7 +497,7 @@ export class EventWatcher {
       case "cancel":
       case "cancelled":
       case "stream_cancelled":
-        await this.handleStreamCancelled(event, eventData);
+        await this.handleStreamCancelled(event, eventData, rawEvent);
         logger.info("Cancellation event detected", {
           txHash: event.txHash,
           ledger: event.ledger,
@@ -513,6 +514,7 @@ export class EventWatcher {
   private async handleStreamCreated(
     event: ParsedContractEvent,
     eventData: Record<string, unknown>,
+    rawEvent: SorobanRpc.Api.EventResponse,
   ): Promise<void> {
     const streamId = this.readStreamId(eventData);
     const totalAmount =
@@ -547,6 +549,7 @@ export class EventWatcher {
     });
 
     // Log to audit log
+    const eventHash = this.computeHashFromRawEvent(rawEvent, event.eventIndex);
     await this.auditLogService.logEvent({
       eventType: "create",
       streamId,
@@ -558,6 +561,7 @@ export class EventWatcher {
       receiver,
       amount: totalAmount,
       metadata: eventData,
+      eventHash,
     });
   }
 
@@ -590,6 +594,7 @@ export class EventWatcher {
   private async handleStreamWithdrawn(
     event: ParsedContractEvent,
     eventData: Record<string, unknown>,
+    rawEvent: SorobanRpc.Api.EventResponse,
   ): Promise<void> {
     const streamId = this.readStreamId(eventData);
     const amount = toBigIntOrNull(eventData.amount);
@@ -612,6 +617,7 @@ export class EventWatcher {
     });
 
     // Log to audit log
+    const eventHash = this.computeHashFromRawEvent(rawEvent, event.eventIndex);
     await this.auditLogService.logEvent({
       eventType: "withdraw",
       streamId,
@@ -621,12 +627,14 @@ export class EventWatcher {
       ledgerClosedAt: event.ledgerClosedAt,
       amount,
       metadata: eventData,
+      eventHash,
     });
   }
 
   private async handleStreamCancelled(
     event: ParsedContractEvent,
     eventData: Record<string, unknown>,
+    rawEvent: SorobanRpc.Api.EventResponse,
   ): Promise<void> {
     const streamId = this.readStreamId(eventData);
     const toReceiver = toBigIntOrNull(eventData.to_receiver);
@@ -671,6 +679,7 @@ export class EventWatcher {
     });
 
     // Log to audit log
+    const eventHash = this.computeHashFromRawEvent(rawEvent, event.eventIndex);
     await this.auditLogService.logEvent({
       eventType: "cancel",
       streamId,
@@ -684,6 +693,23 @@ export class EventWatcher {
         to_receiver: toReceiver.toString(),
         to_sender: toSender.toString(),
       },
+      eventHash,
+    });
+  }
+
+  private computeHashFromRawEvent(
+    event: SorobanRpc.Api.EventResponse,
+    eventIndex: number,
+  ): string {
+    const topicsXdr = event.topic.map((topic) => topic.toXDR("base64"));
+    const valueXdr = event.value.toXDR("base64");
+
+    return computeEventHash({
+      txHash: event.txHash ?? "unknown",
+      eventIndex,
+      ledger: event.ledger,
+      topicsXdr,
+      valueXdr,
     });
   }
 

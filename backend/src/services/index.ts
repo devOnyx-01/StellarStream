@@ -37,4 +37,14 @@ export {
   type CleanupResult,
 } from "./stale-stream-cleanup.service.js";
 
-export { GasTankService, type GasTankStatus, type GasTankConfig } from "./gas-tank.service.js";
+export {
+  GasTankService,
+  type GasTankStatus,
+  type GasTankConfig,
+} from "./gas-tank.service.js";
+
+export {
+  DataIntegrityService,
+  type DataIntegrityMismatch,
+  type DataIntegrityReport,
+} from "./data-integrity.service.js";
