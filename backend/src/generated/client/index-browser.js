@@ -286,6 +286,20 @@ exports.Prisma.NotificationSubscriptionScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.AssetConfigScalarFieldEnum = {
+  id: 'id',
+  assetId: 'assetId',
+  symbol: 'symbol',
+  name: 'name',
+  decimals: 'decimals',
+  isVerified: 'isVerified',
+  isVisible: 'isVisible',
+  yieldEnabled: 'yieldEnabled',
+  iconUrl: 'iconUrl',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -336,7 +350,8 @@ exports.Prisma.ModelName = {
   Proposal: 'Proposal',
   ApiKey: 'ApiKey',
   LedgerHash: 'LedgerHash',
-  NotificationSubscription: 'NotificationSubscription'
+  NotificationSubscription: 'NotificationSubscription',
+  AssetConfig: 'AssetConfig'
 };
 
 /**

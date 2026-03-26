@@ -78,6 +78,11 @@ export type LedgerHash = $Result.DefaultSelection<Prisma.$LedgerHashPayload>
  * 
  */
 export type NotificationSubscription = $Result.DefaultSelection<Prisma.$NotificationSubscriptionPayload>
+/**
+ * Model AssetConfig
+ * 
+ */
+export type AssetConfig = $Result.DefaultSelection<Prisma.$AssetConfigPayload>
 
 /**
  * Enums
@@ -363,6 +368,16 @@ export class PrismaClient<
     * ```
     */
   get notificationSubscription(): Prisma.NotificationSubscriptionDelegate<ExtArgs>;
+
+  /**
+   * `prisma.assetConfig`: Exposes CRUD operations for the **AssetConfig** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more AssetConfigs
+    * const assetConfigs = await prisma.assetConfig.findMany()
+    * ```
+    */
+  get assetConfig(): Prisma.AssetConfigDelegate<ExtArgs>;
 }
 
 export namespace Prisma {
@@ -816,7 +831,8 @@ export namespace Prisma {
     Proposal: 'Proposal',
     ApiKey: 'ApiKey',
     LedgerHash: 'LedgerHash',
-    NotificationSubscription: 'NotificationSubscription'
+    NotificationSubscription: 'NotificationSubscription',
+    AssetConfig: 'AssetConfig'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -832,7 +848,7 @@ export namespace Prisma {
 
   export type TypeMap<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, ClientOptions = {}> = {
     meta: {
-      modelProps: "stream" | "contractEvent" | "tokenPrice" | "webhook" | "syncState" | "eventLog" | "streamSnapshot" | "streamArchive" | "bridgeLog" | "proposal" | "apiKey" | "ledgerHash" | "notificationSubscription"
+      modelProps: "stream" | "contractEvent" | "tokenPrice" | "webhook" | "syncState" | "eventLog" | "streamSnapshot" | "streamArchive" | "bridgeLog" | "proposal" | "apiKey" | "ledgerHash" | "notificationSubscription" | "assetConfig"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1743,6 +1759,76 @@ export namespace Prisma {
           count: {
             args: Prisma.NotificationSubscriptionCountArgs<ExtArgs>
             result: $Utils.Optional<NotificationSubscriptionCountAggregateOutputType> | number
+          }
+        }
+      }
+      AssetConfig: {
+        payload: Prisma.$AssetConfigPayload<ExtArgs>
+        fields: Prisma.AssetConfigFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.AssetConfigFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AssetConfigPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.AssetConfigFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AssetConfigPayload>
+          }
+          findFirst: {
+            args: Prisma.AssetConfigFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AssetConfigPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.AssetConfigFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AssetConfigPayload>
+          }
+          findMany: {
+            args: Prisma.AssetConfigFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AssetConfigPayload>[]
+          }
+          create: {
+            args: Prisma.AssetConfigCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AssetConfigPayload>
+          }
+          createMany: {
+            args: Prisma.AssetConfigCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.AssetConfigCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AssetConfigPayload>[]
+          }
+          delete: {
+            args: Prisma.AssetConfigDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AssetConfigPayload>
+          }
+          update: {
+            args: Prisma.AssetConfigUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AssetConfigPayload>
+          }
+          deleteMany: {
+            args: Prisma.AssetConfigDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.AssetConfigUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.AssetConfigUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AssetConfigPayload>
+          }
+          aggregate: {
+            args: Prisma.AssetConfigAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateAssetConfig>
+          }
+          groupBy: {
+            args: Prisma.AssetConfigGroupByArgs<ExtArgs>
+            result: $Utils.Optional<AssetConfigGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.AssetConfigCountArgs<ExtArgs>
+            result: $Utils.Optional<AssetConfigCountAggregateOutputType> | number
           }
         }
       }
@@ -14414,6 +14500,990 @@ export namespace Prisma {
 
 
   /**
+   * Model AssetConfig
+   */
+
+  export type AggregateAssetConfig = {
+    _count: AssetConfigCountAggregateOutputType | null
+    _avg: AssetConfigAvgAggregateOutputType | null
+    _sum: AssetConfigSumAggregateOutputType | null
+    _min: AssetConfigMinAggregateOutputType | null
+    _max: AssetConfigMaxAggregateOutputType | null
+  }
+
+  export type AssetConfigAvgAggregateOutputType = {
+    decimals: number | null
+  }
+
+  export type AssetConfigSumAggregateOutputType = {
+    decimals: number | null
+  }
+
+  export type AssetConfigMinAggregateOutputType = {
+    id: string | null
+    assetId: string | null
+    symbol: string | null
+    name: string | null
+    decimals: number | null
+    isVerified: boolean | null
+    isVisible: boolean | null
+    yieldEnabled: boolean | null
+    iconUrl: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type AssetConfigMaxAggregateOutputType = {
+    id: string | null
+    assetId: string | null
+    symbol: string | null
+    name: string | null
+    decimals: number | null
+    isVerified: boolean | null
+    isVisible: boolean | null
+    yieldEnabled: boolean | null
+    iconUrl: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type AssetConfigCountAggregateOutputType = {
+    id: number
+    assetId: number
+    symbol: number
+    name: number
+    decimals: number
+    isVerified: number
+    isVisible: number
+    yieldEnabled: number
+    iconUrl: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type AssetConfigAvgAggregateInputType = {
+    decimals?: true
+  }
+
+  export type AssetConfigSumAggregateInputType = {
+    decimals?: true
+  }
+
+  export type AssetConfigMinAggregateInputType = {
+    id?: true
+    assetId?: true
+    symbol?: true
+    name?: true
+    decimals?: true
+    isVerified?: true
+    isVisible?: true
+    yieldEnabled?: true
+    iconUrl?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type AssetConfigMaxAggregateInputType = {
+    id?: true
+    assetId?: true
+    symbol?: true
+    name?: true
+    decimals?: true
+    isVerified?: true
+    isVisible?: true
+    yieldEnabled?: true
+    iconUrl?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type AssetConfigCountAggregateInputType = {
+    id?: true
+    assetId?: true
+    symbol?: true
+    name?: true
+    decimals?: true
+    isVerified?: true
+    isVisible?: true
+    yieldEnabled?: true
+    iconUrl?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type AssetConfigAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which AssetConfig to aggregate.
+     */
+    where?: AssetConfigWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of AssetConfigs to fetch.
+     */
+    orderBy?: AssetConfigOrderByWithRelationInput | AssetConfigOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: AssetConfigWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` AssetConfigs from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` AssetConfigs.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned AssetConfigs
+    **/
+    _count?: true | AssetConfigCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: AssetConfigAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: AssetConfigSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: AssetConfigMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: AssetConfigMaxAggregateInputType
+  }
+
+  export type GetAssetConfigAggregateType<T extends AssetConfigAggregateArgs> = {
+        [P in keyof T & keyof AggregateAssetConfig]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateAssetConfig[P]>
+      : GetScalarType<T[P], AggregateAssetConfig[P]>
+  }
+
+
+
+
+  export type AssetConfigGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: AssetConfigWhereInput
+    orderBy?: AssetConfigOrderByWithAggregationInput | AssetConfigOrderByWithAggregationInput[]
+    by: AssetConfigScalarFieldEnum[] | AssetConfigScalarFieldEnum
+    having?: AssetConfigScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: AssetConfigCountAggregateInputType | true
+    _avg?: AssetConfigAvgAggregateInputType
+    _sum?: AssetConfigSumAggregateInputType
+    _min?: AssetConfigMinAggregateInputType
+    _max?: AssetConfigMaxAggregateInputType
+  }
+
+  export type AssetConfigGroupByOutputType = {
+    id: string
+    assetId: string
+    symbol: string
+    name: string
+    decimals: number
+    isVerified: boolean
+    isVisible: boolean
+    yieldEnabled: boolean
+    iconUrl: string | null
+    createdAt: Date
+    updatedAt: Date
+    _count: AssetConfigCountAggregateOutputType | null
+    _avg: AssetConfigAvgAggregateOutputType | null
+    _sum: AssetConfigSumAggregateOutputType | null
+    _min: AssetConfigMinAggregateOutputType | null
+    _max: AssetConfigMaxAggregateOutputType | null
+  }
+
+  type GetAssetConfigGroupByPayload<T extends AssetConfigGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<AssetConfigGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof AssetConfigGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], AssetConfigGroupByOutputType[P]>
+            : GetScalarType<T[P], AssetConfigGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type AssetConfigSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    assetId?: boolean
+    symbol?: boolean
+    name?: boolean
+    decimals?: boolean
+    isVerified?: boolean
+    isVisible?: boolean
+    yieldEnabled?: boolean
+    iconUrl?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["assetConfig"]>
+
+  export type AssetConfigSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    assetId?: boolean
+    symbol?: boolean
+    name?: boolean
+    decimals?: boolean
+    isVerified?: boolean
+    isVisible?: boolean
+    yieldEnabled?: boolean
+    iconUrl?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["assetConfig"]>
+
+  export type AssetConfigSelectScalar = {
+    id?: boolean
+    assetId?: boolean
+    symbol?: boolean
+    name?: boolean
+    decimals?: boolean
+    isVerified?: boolean
+    isVisible?: boolean
+    yieldEnabled?: boolean
+    iconUrl?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+
+  export type $AssetConfigPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "AssetConfig"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      assetId: string
+      symbol: string
+      name: string
+      decimals: number
+      isVerified: boolean
+      isVisible: boolean
+      yieldEnabled: boolean
+      iconUrl: string | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["assetConfig"]>
+    composites: {}
+  }
+
+  type AssetConfigGetPayload<S extends boolean | null | undefined | AssetConfigDefaultArgs> = $Result.GetResult<Prisma.$AssetConfigPayload, S>
+
+  type AssetConfigCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<AssetConfigFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: AssetConfigCountAggregateInputType | true
+    }
+
+  export interface AssetConfigDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['AssetConfig'], meta: { name: 'AssetConfig' } }
+    /**
+     * Find zero or one AssetConfig that matches the filter.
+     * @param {AssetConfigFindUniqueArgs} args - Arguments to find a AssetConfig
+     * @example
+     * // Get one AssetConfig
+     * const assetConfig = await prisma.assetConfig.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends AssetConfigFindUniqueArgs>(args: SelectSubset<T, AssetConfigFindUniqueArgs<ExtArgs>>): Prisma__AssetConfigClient<$Result.GetResult<Prisma.$AssetConfigPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one AssetConfig that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {AssetConfigFindUniqueOrThrowArgs} args - Arguments to find a AssetConfig
+     * @example
+     * // Get one AssetConfig
+     * const assetConfig = await prisma.assetConfig.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends AssetConfigFindUniqueOrThrowArgs>(args: SelectSubset<T, AssetConfigFindUniqueOrThrowArgs<ExtArgs>>): Prisma__AssetConfigClient<$Result.GetResult<Prisma.$AssetConfigPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first AssetConfig that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AssetConfigFindFirstArgs} args - Arguments to find a AssetConfig
+     * @example
+     * // Get one AssetConfig
+     * const assetConfig = await prisma.assetConfig.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends AssetConfigFindFirstArgs>(args?: SelectSubset<T, AssetConfigFindFirstArgs<ExtArgs>>): Prisma__AssetConfigClient<$Result.GetResult<Prisma.$AssetConfigPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first AssetConfig that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AssetConfigFindFirstOrThrowArgs} args - Arguments to find a AssetConfig
+     * @example
+     * // Get one AssetConfig
+     * const assetConfig = await prisma.assetConfig.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends AssetConfigFindFirstOrThrowArgs>(args?: SelectSubset<T, AssetConfigFindFirstOrThrowArgs<ExtArgs>>): Prisma__AssetConfigClient<$Result.GetResult<Prisma.$AssetConfigPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more AssetConfigs that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AssetConfigFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all AssetConfigs
+     * const assetConfigs = await prisma.assetConfig.findMany()
+     * 
+     * // Get first 10 AssetConfigs
+     * const assetConfigs = await prisma.assetConfig.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const assetConfigWithIdOnly = await prisma.assetConfig.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends AssetConfigFindManyArgs>(args?: SelectSubset<T, AssetConfigFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AssetConfigPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a AssetConfig.
+     * @param {AssetConfigCreateArgs} args - Arguments to create a AssetConfig.
+     * @example
+     * // Create one AssetConfig
+     * const AssetConfig = await prisma.assetConfig.create({
+     *   data: {
+     *     // ... data to create a AssetConfig
+     *   }
+     * })
+     * 
+     */
+    create<T extends AssetConfigCreateArgs>(args: SelectSubset<T, AssetConfigCreateArgs<ExtArgs>>): Prisma__AssetConfigClient<$Result.GetResult<Prisma.$AssetConfigPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many AssetConfigs.
+     * @param {AssetConfigCreateManyArgs} args - Arguments to create many AssetConfigs.
+     * @example
+     * // Create many AssetConfigs
+     * const assetConfig = await prisma.assetConfig.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends AssetConfigCreateManyArgs>(args?: SelectSubset<T, AssetConfigCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many AssetConfigs and returns the data saved in the database.
+     * @param {AssetConfigCreateManyAndReturnArgs} args - Arguments to create many AssetConfigs.
+     * @example
+     * // Create many AssetConfigs
+     * const assetConfig = await prisma.assetConfig.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many AssetConfigs and only return the `id`
+     * const assetConfigWithIdOnly = await prisma.assetConfig.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends AssetConfigCreateManyAndReturnArgs>(args?: SelectSubset<T, AssetConfigCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AssetConfigPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a AssetConfig.
+     * @param {AssetConfigDeleteArgs} args - Arguments to delete one AssetConfig.
+     * @example
+     * // Delete one AssetConfig
+     * const AssetConfig = await prisma.assetConfig.delete({
+     *   where: {
+     *     // ... filter to delete one AssetConfig
+     *   }
+     * })
+     * 
+     */
+    delete<T extends AssetConfigDeleteArgs>(args: SelectSubset<T, AssetConfigDeleteArgs<ExtArgs>>): Prisma__AssetConfigClient<$Result.GetResult<Prisma.$AssetConfigPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one AssetConfig.
+     * @param {AssetConfigUpdateArgs} args - Arguments to update one AssetConfig.
+     * @example
+     * // Update one AssetConfig
+     * const assetConfig = await prisma.assetConfig.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends AssetConfigUpdateArgs>(args: SelectSubset<T, AssetConfigUpdateArgs<ExtArgs>>): Prisma__AssetConfigClient<$Result.GetResult<Prisma.$AssetConfigPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more AssetConfigs.
+     * @param {AssetConfigDeleteManyArgs} args - Arguments to filter AssetConfigs to delete.
+     * @example
+     * // Delete a few AssetConfigs
+     * const { count } = await prisma.assetConfig.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends AssetConfigDeleteManyArgs>(args?: SelectSubset<T, AssetConfigDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more AssetConfigs.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AssetConfigUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many AssetConfigs
+     * const assetConfig = await prisma.assetConfig.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends AssetConfigUpdateManyArgs>(args: SelectSubset<T, AssetConfigUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one AssetConfig.
+     * @param {AssetConfigUpsertArgs} args - Arguments to update or create a AssetConfig.
+     * @example
+     * // Update or create a AssetConfig
+     * const assetConfig = await prisma.assetConfig.upsert({
+     *   create: {
+     *     // ... data to create a AssetConfig
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the AssetConfig we want to update
+     *   }
+     * })
+     */
+    upsert<T extends AssetConfigUpsertArgs>(args: SelectSubset<T, AssetConfigUpsertArgs<ExtArgs>>): Prisma__AssetConfigClient<$Result.GetResult<Prisma.$AssetConfigPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of AssetConfigs.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AssetConfigCountArgs} args - Arguments to filter AssetConfigs to count.
+     * @example
+     * // Count the number of AssetConfigs
+     * const count = await prisma.assetConfig.count({
+     *   where: {
+     *     // ... the filter for the AssetConfigs we want to count
+     *   }
+     * })
+    **/
+    count<T extends AssetConfigCountArgs>(
+      args?: Subset<T, AssetConfigCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], AssetConfigCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a AssetConfig.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AssetConfigAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends AssetConfigAggregateArgs>(args: Subset<T, AssetConfigAggregateArgs>): Prisma.PrismaPromise<GetAssetConfigAggregateType<T>>
+
+    /**
+     * Group by AssetConfig.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AssetConfigGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends AssetConfigGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: AssetConfigGroupByArgs['orderBy'] }
+        : { orderBy?: AssetConfigGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, AssetConfigGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetAssetConfigGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the AssetConfig model
+   */
+  readonly fields: AssetConfigFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for AssetConfig.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__AssetConfigClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the AssetConfig model
+   */ 
+  interface AssetConfigFieldRefs {
+    readonly id: FieldRef<"AssetConfig", 'String'>
+    readonly assetId: FieldRef<"AssetConfig", 'String'>
+    readonly symbol: FieldRef<"AssetConfig", 'String'>
+    readonly name: FieldRef<"AssetConfig", 'String'>
+    readonly decimals: FieldRef<"AssetConfig", 'Int'>
+    readonly isVerified: FieldRef<"AssetConfig", 'Boolean'>
+    readonly isVisible: FieldRef<"AssetConfig", 'Boolean'>
+    readonly yieldEnabled: FieldRef<"AssetConfig", 'Boolean'>
+    readonly iconUrl: FieldRef<"AssetConfig", 'String'>
+    readonly createdAt: FieldRef<"AssetConfig", 'DateTime'>
+    readonly updatedAt: FieldRef<"AssetConfig", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * AssetConfig findUnique
+   */
+  export type AssetConfigFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AssetConfig
+     */
+    select?: AssetConfigSelect<ExtArgs> | null
+    /**
+     * Filter, which AssetConfig to fetch.
+     */
+    where: AssetConfigWhereUniqueInput
+  }
+
+  /**
+   * AssetConfig findUniqueOrThrow
+   */
+  export type AssetConfigFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AssetConfig
+     */
+    select?: AssetConfigSelect<ExtArgs> | null
+    /**
+     * Filter, which AssetConfig to fetch.
+     */
+    where: AssetConfigWhereUniqueInput
+  }
+
+  /**
+   * AssetConfig findFirst
+   */
+  export type AssetConfigFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AssetConfig
+     */
+    select?: AssetConfigSelect<ExtArgs> | null
+    /**
+     * Filter, which AssetConfig to fetch.
+     */
+    where?: AssetConfigWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of AssetConfigs to fetch.
+     */
+    orderBy?: AssetConfigOrderByWithRelationInput | AssetConfigOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for AssetConfigs.
+     */
+    cursor?: AssetConfigWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` AssetConfigs from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` AssetConfigs.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of AssetConfigs.
+     */
+    distinct?: AssetConfigScalarFieldEnum | AssetConfigScalarFieldEnum[]
+  }
+
+  /**
+   * AssetConfig findFirstOrThrow
+   */
+  export type AssetConfigFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AssetConfig
+     */
+    select?: AssetConfigSelect<ExtArgs> | null
+    /**
+     * Filter, which AssetConfig to fetch.
+     */
+    where?: AssetConfigWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of AssetConfigs to fetch.
+     */
+    orderBy?: AssetConfigOrderByWithRelationInput | AssetConfigOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for AssetConfigs.
+     */
+    cursor?: AssetConfigWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` AssetConfigs from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` AssetConfigs.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of AssetConfigs.
+     */
+    distinct?: AssetConfigScalarFieldEnum | AssetConfigScalarFieldEnum[]
+  }
+
+  /**
+   * AssetConfig findMany
+   */
+  export type AssetConfigFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AssetConfig
+     */
+    select?: AssetConfigSelect<ExtArgs> | null
+    /**
+     * Filter, which AssetConfigs to fetch.
+     */
+    where?: AssetConfigWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of AssetConfigs to fetch.
+     */
+    orderBy?: AssetConfigOrderByWithRelationInput | AssetConfigOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing AssetConfigs.
+     */
+    cursor?: AssetConfigWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` AssetConfigs from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` AssetConfigs.
+     */
+    skip?: number
+    distinct?: AssetConfigScalarFieldEnum | AssetConfigScalarFieldEnum[]
+  }
+
+  /**
+   * AssetConfig create
+   */
+  export type AssetConfigCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AssetConfig
+     */
+    select?: AssetConfigSelect<ExtArgs> | null
+    /**
+     * The data needed to create a AssetConfig.
+     */
+    data: XOR<AssetConfigCreateInput, AssetConfigUncheckedCreateInput>
+  }
+
+  /**
+   * AssetConfig createMany
+   */
+  export type AssetConfigCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many AssetConfigs.
+     */
+    data: AssetConfigCreateManyInput | AssetConfigCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * AssetConfig createManyAndReturn
+   */
+  export type AssetConfigCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AssetConfig
+     */
+    select?: AssetConfigSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many AssetConfigs.
+     */
+    data: AssetConfigCreateManyInput | AssetConfigCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * AssetConfig update
+   */
+  export type AssetConfigUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AssetConfig
+     */
+    select?: AssetConfigSelect<ExtArgs> | null
+    /**
+     * The data needed to update a AssetConfig.
+     */
+    data: XOR<AssetConfigUpdateInput, AssetConfigUncheckedUpdateInput>
+    /**
+     * Choose, which AssetConfig to update.
+     */
+    where: AssetConfigWhereUniqueInput
+  }
+
+  /**
+   * AssetConfig updateMany
+   */
+  export type AssetConfigUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update AssetConfigs.
+     */
+    data: XOR<AssetConfigUpdateManyMutationInput, AssetConfigUncheckedUpdateManyInput>
+    /**
+     * Filter which AssetConfigs to update
+     */
+    where?: AssetConfigWhereInput
+  }
+
+  /**
+   * AssetConfig upsert
+   */
+  export type AssetConfigUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AssetConfig
+     */
+    select?: AssetConfigSelect<ExtArgs> | null
+    /**
+     * The filter to search for the AssetConfig to update in case it exists.
+     */
+    where: AssetConfigWhereUniqueInput
+    /**
+     * In case the AssetConfig found by the `where` argument doesn't exist, create a new AssetConfig with this data.
+     */
+    create: XOR<AssetConfigCreateInput, AssetConfigUncheckedCreateInput>
+    /**
+     * In case the AssetConfig was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<AssetConfigUpdateInput, AssetConfigUncheckedUpdateInput>
+  }
+
+  /**
+   * AssetConfig delete
+   */
+  export type AssetConfigDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AssetConfig
+     */
+    select?: AssetConfigSelect<ExtArgs> | null
+    /**
+     * Filter which AssetConfig to delete.
+     */
+    where: AssetConfigWhereUniqueInput
+  }
+
+  /**
+   * AssetConfig deleteMany
+   */
+  export type AssetConfigDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which AssetConfigs to delete
+     */
+    where?: AssetConfigWhereInput
+  }
+
+  /**
+   * AssetConfig without action
+   */
+  export type AssetConfigDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AssetConfig
+     */
+    select?: AssetConfigSelect<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -14628,6 +15698,23 @@ export namespace Prisma {
   };
 
   export type NotificationSubscriptionScalarFieldEnum = (typeof NotificationSubscriptionScalarFieldEnum)[keyof typeof NotificationSubscriptionScalarFieldEnum]
+
+
+  export const AssetConfigScalarFieldEnum: {
+    id: 'id',
+    assetId: 'assetId',
+    symbol: 'symbol',
+    name: 'name',
+    decimals: 'decimals',
+    isVerified: 'isVerified',
+    isVisible: 'isVisible',
+    yieldEnabled: 'yieldEnabled',
+    iconUrl: 'iconUrl',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type AssetConfigScalarFieldEnum = (typeof AssetConfigScalarFieldEnum)[keyof typeof AssetConfigScalarFieldEnum]
 
 
   export const SortOrder: {
@@ -15790,6 +16877,90 @@ export namespace Prisma {
     updatedAt?: DateTimeWithAggregatesFilter<"NotificationSubscription"> | Date | string
   }
 
+  export type AssetConfigWhereInput = {
+    AND?: AssetConfigWhereInput | AssetConfigWhereInput[]
+    OR?: AssetConfigWhereInput[]
+    NOT?: AssetConfigWhereInput | AssetConfigWhereInput[]
+    id?: StringFilter<"AssetConfig"> | string
+    assetId?: StringFilter<"AssetConfig"> | string
+    symbol?: StringFilter<"AssetConfig"> | string
+    name?: StringFilter<"AssetConfig"> | string
+    decimals?: IntFilter<"AssetConfig"> | number
+    isVerified?: BoolFilter<"AssetConfig"> | boolean
+    isVisible?: BoolFilter<"AssetConfig"> | boolean
+    yieldEnabled?: BoolFilter<"AssetConfig"> | boolean
+    iconUrl?: StringNullableFilter<"AssetConfig"> | string | null
+    createdAt?: DateTimeFilter<"AssetConfig"> | Date | string
+    updatedAt?: DateTimeFilter<"AssetConfig"> | Date | string
+  }
+
+  export type AssetConfigOrderByWithRelationInput = {
+    id?: SortOrder
+    assetId?: SortOrder
+    symbol?: SortOrder
+    name?: SortOrder
+    decimals?: SortOrder
+    isVerified?: SortOrder
+    isVisible?: SortOrder
+    yieldEnabled?: SortOrder
+    iconUrl?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type AssetConfigWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    assetId?: string
+    AND?: AssetConfigWhereInput | AssetConfigWhereInput[]
+    OR?: AssetConfigWhereInput[]
+    NOT?: AssetConfigWhereInput | AssetConfigWhereInput[]
+    symbol?: StringFilter<"AssetConfig"> | string
+    name?: StringFilter<"AssetConfig"> | string
+    decimals?: IntFilter<"AssetConfig"> | number
+    isVerified?: BoolFilter<"AssetConfig"> | boolean
+    isVisible?: BoolFilter<"AssetConfig"> | boolean
+    yieldEnabled?: BoolFilter<"AssetConfig"> | boolean
+    iconUrl?: StringNullableFilter<"AssetConfig"> | string | null
+    createdAt?: DateTimeFilter<"AssetConfig"> | Date | string
+    updatedAt?: DateTimeFilter<"AssetConfig"> | Date | string
+  }, "id" | "assetId">
+
+  export type AssetConfigOrderByWithAggregationInput = {
+    id?: SortOrder
+    assetId?: SortOrder
+    symbol?: SortOrder
+    name?: SortOrder
+    decimals?: SortOrder
+    isVerified?: SortOrder
+    isVisible?: SortOrder
+    yieldEnabled?: SortOrder
+    iconUrl?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: AssetConfigCountOrderByAggregateInput
+    _avg?: AssetConfigAvgOrderByAggregateInput
+    _max?: AssetConfigMaxOrderByAggregateInput
+    _min?: AssetConfigMinOrderByAggregateInput
+    _sum?: AssetConfigSumOrderByAggregateInput
+  }
+
+  export type AssetConfigScalarWhereWithAggregatesInput = {
+    AND?: AssetConfigScalarWhereWithAggregatesInput | AssetConfigScalarWhereWithAggregatesInput[]
+    OR?: AssetConfigScalarWhereWithAggregatesInput[]
+    NOT?: AssetConfigScalarWhereWithAggregatesInput | AssetConfigScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"AssetConfig"> | string
+    assetId?: StringWithAggregatesFilter<"AssetConfig"> | string
+    symbol?: StringWithAggregatesFilter<"AssetConfig"> | string
+    name?: StringWithAggregatesFilter<"AssetConfig"> | string
+    decimals?: IntWithAggregatesFilter<"AssetConfig"> | number
+    isVerified?: BoolWithAggregatesFilter<"AssetConfig"> | boolean
+    isVisible?: BoolWithAggregatesFilter<"AssetConfig"> | boolean
+    yieldEnabled?: BoolWithAggregatesFilter<"AssetConfig"> | boolean
+    iconUrl?: StringNullableWithAggregatesFilter<"AssetConfig"> | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"AssetConfig"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"AssetConfig"> | Date | string
+  }
+
   export type StreamCreateInput = {
     id?: string
     streamId?: string | null
@@ -16938,6 +18109,104 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type AssetConfigCreateInput = {
+    id?: string
+    assetId: string
+    symbol: string
+    name: string
+    decimals?: number
+    isVerified?: boolean
+    isVisible?: boolean
+    yieldEnabled?: boolean
+    iconUrl?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type AssetConfigUncheckedCreateInput = {
+    id?: string
+    assetId: string
+    symbol: string
+    name: string
+    decimals?: number
+    isVerified?: boolean
+    isVisible?: boolean
+    yieldEnabled?: boolean
+    iconUrl?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type AssetConfigUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    assetId?: StringFieldUpdateOperationsInput | string
+    symbol?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    decimals?: IntFieldUpdateOperationsInput | number
+    isVerified?: BoolFieldUpdateOperationsInput | boolean
+    isVisible?: BoolFieldUpdateOperationsInput | boolean
+    yieldEnabled?: BoolFieldUpdateOperationsInput | boolean
+    iconUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type AssetConfigUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    assetId?: StringFieldUpdateOperationsInput | string
+    symbol?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    decimals?: IntFieldUpdateOperationsInput | number
+    isVerified?: BoolFieldUpdateOperationsInput | boolean
+    isVisible?: BoolFieldUpdateOperationsInput | boolean
+    yieldEnabled?: BoolFieldUpdateOperationsInput | boolean
+    iconUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type AssetConfigCreateManyInput = {
+    id?: string
+    assetId: string
+    symbol: string
+    name: string
+    decimals?: number
+    isVerified?: boolean
+    isVisible?: boolean
+    yieldEnabled?: boolean
+    iconUrl?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type AssetConfigUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    assetId?: StringFieldUpdateOperationsInput | string
+    symbol?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    decimals?: IntFieldUpdateOperationsInput | number
+    isVerified?: BoolFieldUpdateOperationsInput | boolean
+    isVisible?: BoolFieldUpdateOperationsInput | boolean
+    yieldEnabled?: BoolFieldUpdateOperationsInput | boolean
+    iconUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type AssetConfigUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    assetId?: StringFieldUpdateOperationsInput | string
+    symbol?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    decimals?: IntFieldUpdateOperationsInput | number
+    isVerified?: BoolFieldUpdateOperationsInput | boolean
+    isVisible?: BoolFieldUpdateOperationsInput | boolean
+    yieldEnabled?: BoolFieldUpdateOperationsInput | boolean
+    iconUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type StringFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
     in?: string[] | ListStringFieldRefInput<$PrismaModel>
@@ -17904,6 +19173,56 @@ export namespace Prisma {
     _max?: NestedEnumNotificationPlatformFilter<$PrismaModel>
   }
 
+  export type AssetConfigCountOrderByAggregateInput = {
+    id?: SortOrder
+    assetId?: SortOrder
+    symbol?: SortOrder
+    name?: SortOrder
+    decimals?: SortOrder
+    isVerified?: SortOrder
+    isVisible?: SortOrder
+    yieldEnabled?: SortOrder
+    iconUrl?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type AssetConfigAvgOrderByAggregateInput = {
+    decimals?: SortOrder
+  }
+
+  export type AssetConfigMaxOrderByAggregateInput = {
+    id?: SortOrder
+    assetId?: SortOrder
+    symbol?: SortOrder
+    name?: SortOrder
+    decimals?: SortOrder
+    isVerified?: SortOrder
+    isVisible?: SortOrder
+    yieldEnabled?: SortOrder
+    iconUrl?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type AssetConfigMinOrderByAggregateInput = {
+    id?: SortOrder
+    assetId?: SortOrder
+    symbol?: SortOrder
+    name?: SortOrder
+    decimals?: SortOrder
+    isVerified?: SortOrder
+    isVisible?: SortOrder
+    yieldEnabled?: SortOrder
+    iconUrl?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type AssetConfigSumOrderByAggregateInput = {
+    decimals?: SortOrder
+  }
+
   export type StringFieldUpdateOperationsInput = {
     set?: string
   }
@@ -18365,6 +19684,10 @@ export namespace Prisma {
      * @deprecated Use NotificationSubscriptionDefaultArgs instead
      */
     export type NotificationSubscriptionArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = NotificationSubscriptionDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use AssetConfigDefaultArgs instead
+     */
+    export type AssetConfigArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = AssetConfigDefaultArgs<ExtArgs>
 
   /**
    * Batch Payload for updateMany & deleteMany & createMany

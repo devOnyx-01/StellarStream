@@ -240,3 +240,21 @@ enum NotificationPlatform {
   discord
   telegram
 }
+
+// Whitelisted assets visible in the StellarStream UI
+model AssetConfig {
+  id           String   @id @default(cuid())
+  assetId      String   @unique // Stellar asset identifier (e.g. "USDC:GABC...")
+  symbol       String
+  name         String
+  decimals     Int      @default(7)
+  isVerified   Boolean  @default(false)
+  isVisible    Boolean  @default(true)
+  yieldEnabled Boolean  @default(false) @map("yield_enabled")
+  iconUrl      String?  @map("icon_url")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([isVerified])
+  @@index([isVisible])
+}
