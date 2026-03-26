@@ -13,3 +13,13 @@ soroban-sdk = "22.0.10"
 
 [dev-dependencies]
 soroban-sdk = { version = "22.0.10", features = ["testutils"] }
+
+# ── WASM size optimizations ──────────────────────────────────────────────────
+[profile.release]
+opt-level = "z"        # Optimize for size (smaller than "s")
+lto = true             # Link-time optimization — removes dead code across crates
+codegen-units = 1      # Single codegen unit enables maximum inlining + DCE
+strip = "symbols"      # Strip debug symbols from the final WASM
+overflow-checks = false # Disable overflow checks (Soroban host traps on overflow anyway)
+debug = false
+panic = "abort"        # Abort on panic — removes unwinding machinery (~10–20 KB)

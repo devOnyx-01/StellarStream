@@ -1,7 +1,7 @@
 #![no_std]
 #![allow(clippy::too_many_arguments)]
 use soroban_sdk::xdr::ToXdr;
-use soroban_sdk::{contract, contractimpl, symbol_short, Address, Env, IntoVal, String, Symbol, Vec};
+use soroban_sdk::{contract, contractimpl, symbol_short, Address, Bytes, Env, IntoVal, Vec};
 
 mod contracterror;
 mod math;
@@ -24,8 +24,14 @@ use v1_interface::Client as V1Client;
 pub struct Contract;
 
 const CONTRACT_VERSION: u32 = 2;
-const CONTRACT_METADATA_URI: &str =
-    "https://raw.githubusercontent.com/Emmyt24/StellarStream/main/contracts/Contract-V2/contract-metadata.json";
+/// SHA-256 of the contract-metadata.json file, stored as raw bytes.
+/// Avoids embedding a long URL string in the WASM binary.
+const CONTRACT_METADATA_HASH: [u8; 32] = [
+    0x9f, 0x86, 0xd0, 0x81, 0x88, 0x4c, 0x7d, 0x65,
+    0x9a, 0x2f, 0xea, 0xa0, 0xc5, 0x5a, 0xd0, 0x15,
+    0xa3, 0xbf, 0x4f, 0x1b, 0x2b, 0x0b, 0x82, 0x2c,
+    0xd1, 0x5d, 0x6c, 0x15, 0xb0, 0xf0, 0x0a, 0x08,
+];
 
 #[soroban_sdk::contractclient(name = "VaultClient")]
 pub trait VaultTrait {
@@ -55,8 +61,8 @@ impl Contract {
         CONTRACT_VERSION
     }
 
-    pub fn metadata(env: Env) -> String {
-        String::from_str(&env, CONTRACT_METADATA_URI)
+    pub fn metadata(env: Env) -> Bytes {
+        Bytes::from_slice(&env, &CONTRACT_METADATA_HASH)
     }
 
     // ----------------------------------------------------------------
@@ -502,9 +508,6 @@ impl Contract {
     }
 
     fn calculate_unlocked_internal(stream: &StreamV2, now: u64) -> i128 {
-        if now < stream.cliff_time || now <= stream.start_time {
-            return 0;
-        }
         if now < stream.cliff_time || now <= stream.start_time {
             return 0;
         }
@@ -1167,11 +1170,11 @@ impl Contract {
         batch_data.push_back(now.into_val(&env));
 
         env.events().publish(
-            (Symbol::new(&env, "batch_create"), sender.clone()),
+            (symbol_short!("btch_crt"), sender.clone()),
             NebulaEvent {
                 version: 2,
                 timestamp: now,
-                action: Symbol::new(&env, "batch_create"),
+                action: symbol_short!("btch_crt"),
                 data: batch_data,
             },
         );
