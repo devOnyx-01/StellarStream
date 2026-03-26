@@ -50,7 +50,7 @@ npm start
   /api        - REST API routes and controllers
   /lib        - Shared DB and Redis clients
   /middleware - Auth and rate-limit middleware
-  /indexer    - Stellar blockchain indexer
+  /ingestor   - Warp V2 Soroban event-polling engine
   /services   - Business logic layer
   /types      - TypeScript type definitions
 ```

@@ -1,5 +1,5 @@
-// Stellar blockchain indexer
-// Monitors and indexes payment stream transactions from Stellar network
+// Warp Ingestor — V2 Soroban event-polling engine
+// Monitors and ingests payment stream events from the Stellar network
 
 export {};
 export { DualVersionIngestor } from "./dual-version-ingestor.js";
