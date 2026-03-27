@@ -16,6 +16,8 @@ import invoiceLinkRouter from "./invoice-link.routes.js";
 import webhooksRouter from "./webhooks.routes.js";
 import cachedStatsRouter from "./cached-stats.routes.js";
 
+import orgMemberRouter from "./org-member.routes.js";
+
 const router = Router();
 
 // Sub-routers (mounted relative to /api/v1 in index.ts)
@@ -30,6 +32,7 @@ router.use("/notifications", notificationRouter);
 router.use("/invoice-links", invoiceLinkRouter);
 router.use("/webhooks", webhooksRouter);
 router.use("/stats", cachedStatsRouter);
+router.use("/", orgMemberRouter);
 
 const auditLogService = new AuditLogService();
 

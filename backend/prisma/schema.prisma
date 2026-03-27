@@ -225,6 +225,33 @@ enum StreamStatus {
   ARCHIVED // V1 stream successfully migrated to V2 — hidden from active UI
 }
 
+// RBAC roles for shared G-address organisations
+enum OrgRole {
+  DRAFTER   // Can create and edit draft splits
+  APPROVER  // Can approve or reject pending splits
+  EXECUTOR  // Can submit approved splits to the ledger
+}
+
+// Maps a Stellar address to a role within a shared G-address organisation
+model OrganizationMember {
+  id            String   @id @default(cuid())
+  /// The shared G-address that represents the organisation
+  orgAddress    String
+  /// The individual member's Stellar G-address
+  memberAddress String
+  role          OrgRole
+  /// Who granted this membership
+  addedBy       String
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([orgAddress, memberAddress])
+  @@index([orgAddress])
+  @@index([memberAddress])
+  @@index([role])
+}
+
 // API keys for 3rd-party partner dApps with elevated rate limits
 model ApiKey {
   id          String    @id @default(cuid())
@@ -290,6 +317,8 @@ model InvoiceLink {
   @@index([sender])
   @@index([status])
   @@index([createdAt])
+}
+
 // Affiliate earnings tracker for 0.5% commission on stream creation
 model Affiliate {
   id             String   @id @default(cuid())
@@ -301,6 +330,7 @@ model Affiliate {
   updatedAt      DateTime @updatedAt
 
   @@index([stellarAddress])
+}
 // Global protocol statistics for landing page
 model GlobalStats {
   id              String   @id @default("global")
@@ -336,6 +366,8 @@ model Asset {
   updatedAt       DateTime @updatedAt
 
   @@index([tokenAddress])
+}
+
 // Autopilot periodic split schedules
 model AutopilotSchedule {
   id              String    @id @default(cuid())
