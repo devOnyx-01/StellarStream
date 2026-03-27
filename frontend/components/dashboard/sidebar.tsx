@@ -18,6 +18,7 @@ import {
   ShieldAlert,
   Menu,
   X,
+  ScrollText,
 } from "lucide-react";
 import { TransactionQueueManager } from "@/components/dashboard/TransactionQueueManager";
 
@@ -98,6 +99,11 @@ export function Sidebar({ onOpenAuditLog }: SidebarProps) {
       icon: ClipboardCheck,
     },
     { label: "Settings", href: "/dashboard/settings", icon: Settings },
+    {
+      label: "Approval Policies",
+      href: "/dashboard/policies",
+      icon: ScrollText,
+    },
     {
       label: "Security Vault",
       href: "/dashboard/security-vault",
