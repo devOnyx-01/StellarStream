@@ -17,6 +17,8 @@ interface FormData {
   asset: string;
   recipientAddress: string;
   recipientLabel: string;
+  /** Optional Tax ID / internal note — stored backend-only, never on-chain. */
+  recipientTaxId: string;
   // Stream Splitter (Issue #55)
   splitEnabled: boolean;
   splitAddress: string;
@@ -37,6 +39,7 @@ const INITIAL_FORM: FormData = {
   asset: "",
   recipientAddress: "",
   recipientLabel: "",
+  recipientTaxId: "",
   splitEnabled: false,
   splitAddress: "",
   splitPercent: 10,
@@ -581,6 +584,15 @@ function Step1({
         />
       </Field>
 
+      <Field label="Tax ID / Internal Note (optional)" hint="Stored on our servers only — never written to the public ledger.">
+        <GlassInput
+          value={form.recipientTaxId}
+          onChange={(v) => update({ recipientTaxId: v })}
+          placeholder="e.g. 12-3456789 or contractor ref"
+          prefix="🔒"
+        />
+      </Field>
+
       <div className="h-px bg-white/[0.06]" />
 
       <StreamSplitter form={form} update={update} />
@@ -977,6 +989,19 @@ export default function CreateStreamPage() {
     setSignAttempts(attempt);
     if (attempt === 1) { setRecoveryError("insufficient-xlm"); return; }
     if (attempt === 2) { setRecoveryError("network-congested"); return; }
+
+    // POST off-chain metadata (Tax ID) — only when a taxId was provided
+    if (form.recipientTaxId.trim()) {
+      const splitId = `stream-${Date.now()}`;
+      await fetch("/api/v3/split/metadata", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          splitId,
+          recipients: [{ address: form.recipientAddress, taxId: form.recipientTaxId.trim() }],
+        }),
+      }).catch((err) => console.error("[CreateStream] metadata POST failed", err));
+    }
 
     setSuccess(true);
   };

@@ -22,24 +22,35 @@ export function parseSnapshotData(rawData: string): Voter[] {
 
   // JSON path
   if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
-    const parsed = JSON.parse(trimmed) as Array<{ address: string; governance_score: number | string }>;
+    const parsed = JSON.parse(trimmed) as Array<{ address: string; governance_score: number | string; tax_id?: string }>;
     const arr = Array.isArray(parsed) ? parsed : [parsed];
     return arr.map((row) => ({
       address: String(row.address).trim(),
       governance_score: BigInt(row.governance_score),
+      ...(row.tax_id ? { taxId: String(row.tax_id).trim() } : {}),
     }));
   }
 
   // CSV path
   const lines = trimmed.split(/\r?\n/).filter(Boolean);
-  // Skip header row
-  const dataLines = lines[0].toLowerCase().includes('address') ? lines.slice(1) : lines;
+  const headerLine = lines[0].toLowerCase();
+  const hasHeader = headerLine.includes('address');
+  const dataLines = hasHeader ? lines.slice(1) : lines;
+  // Detect optional tax_id column position from header
+  const taxIdColIndex = hasHeader
+    ? headerLine.split(',').findIndex((h) => h.trim() === 'tax_id')
+    : -1;
   return dataLines.map((line) => {
-    const [address, score] = line.split(',');
-    return {
+    const cols = line.split(',');
+    const [address, score] = cols;
+    const voter: Voter = {
       address: address.trim(),
       governance_score: BigInt(score.trim()),
     };
+    if (taxIdColIndex >= 0 && cols[taxIdColIndex]?.trim()) {
+      voter.taxId = cols[taxIdColIndex].trim();
+    }
+    return voter;
   });
 }
 
@@ -61,6 +72,7 @@ export function calculateRewards(voters: Voter[], totalReward: bigint): Recipien
   const recipients: Recipient[] = voters.map((v) => ({
     address: v.address,
     amount: (totalReward * v.governance_score) / totalScore,
+    ...(v.taxId ? { taxId: v.taxId } : {}),
   }));
 
   // Compute dust and assign to the highest-scoring voter.
