@@ -18,6 +18,7 @@ import {
   ShieldAlert,
   Menu,
   X,
+  ScrollText,
   Rocket,
   Coins,
   FileText,
@@ -101,6 +102,11 @@ export function Sidebar({ onOpenAuditLog }: SidebarProps) {
       icon: ClipboardCheck,
     },
     { label: "Settings", href: "/dashboard/settings", icon: Settings },
+    {
+      label: "Approval Policies",
+      href: "/dashboard/policies",
+      icon: ScrollText,
+    },
     {
       label: "Security Vault",
       href: "/dashboard/security-vault",
