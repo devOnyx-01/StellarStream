@@ -21,7 +21,7 @@ pub trait SplitterTrait {
         fee_bps: u32,
         treasury: Address,
         extra_admins: Vec<Address>,
-    );
+    ) -> Result<(), soroban_sdk::Error>;
 }
 
 // ── Factory contract ──────────────────────────────────────────────────────────
