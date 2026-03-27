@@ -25,4 +25,6 @@ pub enum DataKey {
     NextSplitId,
     /// persistent() — scheduled splits keyed by split_id
     ScheduledSplit(u64),
+    /// persistent() — claimable balance keyed by (recipient, asset)
+    ClaimableBalance(Address, Address),
 }

@@ -19,4 +19,5 @@ pub enum Error {
     SplitAlreadyCancelled = 14, // split was already cancelled
     SplitAlreadyExecuted = 15,  // split was already executed
     SplitNotYetDue = 16,      // release_time has not been reached
+    NothingToClaim = 17,      // claimable balance is zero
 }

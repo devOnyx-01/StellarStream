@@ -492,6 +492,110 @@ impl SplitterV3 {
             .get(&DataKey::ScheduledSplit(split_id))
     }
 
+    // ── Pull-based (claimable) splits ─────────────────────────────────────────
+
+    /// Like `split`, but instead of pushing tokens to recipients, credits each
+    /// recipient's claimable balance in the contract.  Recipients must call
+    /// `claim_share` to actually receive their funds.
+    ///
+    /// This avoids failures caused by missing trustlines on the recipient side.
+    /// The fee is still deducted and forwarded to the treasury immediately.
+    pub fn split_pull(
+        env: Env,
+        sender: Address,
+        recipients: Vec<Recipient>,
+        total_amount: i128,
+    ) -> Result<(), Error> {
+        sender.require_auth();
+
+        let mut bps_sum: u32 = 0;
+        for r in recipients.iter() {
+            bps_sum = bps_sum.checked_add(r.share_bps).ok_or(Error::Overflow)?;
+        }
+        if bps_sum != 10_000 {
+            return Err(Error::InvalidSplit);
+        }
+
+        let token_addr: Address = env.storage().instance().get(&DataKey::Token).unwrap();
+        let token_client = token::Client::new(&env, &token_addr);
+        let contract_addr = env.current_contract_address();
+
+        // Pull the full amount into the contract.
+        token_client.transfer(&sender, &contract_addr, &total_amount);
+
+        // Deduct fee and forward to treasury immediately.
+        let fee_bps: u32 = env.storage().instance().get(&DataKey::FeeBps).unwrap_or(0);
+        let fee_amount = if fee_bps > 0 {
+            let f = total_amount
+                .checked_mul(fee_bps as i128)
+                .ok_or(Error::Overflow)?
+                / 10_000;
+            let treasury: Address = env.storage().instance().get(&DataKey::Treasury).unwrap();
+            if f > 0 {
+                token_client.transfer(&contract_addr, &treasury, &f);
+            }
+            f
+        } else {
+            0
+        };
+        let distributable = total_amount.checked_sub(fee_amount).ok_or(Error::Overflow)?;
+
+        // Credit each recipient's claimable balance — no token transfer yet.
+        for r in recipients.iter() {
+            let share = distributable
+                .checked_mul(r.share_bps as i128)
+                .ok_or(Error::Overflow)?
+                / 10_000;
+            if share > 0 {
+                Self::_credit_claimable(&env, &r.address, &token_addr, share)?;
+            }
+        }
+
+        env.events()
+            .publish((symbol_short!("pullsplit"),), distributable);
+
+        Ok(())
+    }
+
+    /// Claim all tokens owed to `caller` for the given `asset`.
+    ///
+    /// Reads the caller's claimable balance, zeroes it, then transfers the
+    /// tokens from the contract to the caller.  Reverts with `NothingToClaim`
+    /// if the balance is zero.
+    pub fn claim_share(env: Env, caller: Address, asset: Address) -> Result<(), Error> {
+        caller.require_auth();
+
+        let key = DataKey::ClaimableBalance(caller.clone(), asset.clone());
+        let amount: i128 = env
+            .storage()
+            .persistent()
+            .get(&key)
+            .unwrap_or(0);
+
+        if amount <= 0 {
+            return Err(Error::NothingToClaim);
+        }
+
+        // Zero the balance before transferring (checks-effects-interactions).
+        env.storage().persistent().set(&key, &0i128);
+
+        let token_client = token::Client::new(&env, &asset);
+        token_client.transfer(&env.current_contract_address(), &caller, &amount);
+
+        env.events()
+            .publish((symbol_short!("claimed"), caller), amount);
+
+        Ok(())
+    }
+
+    /// View the claimable balance for a given recipient and asset.
+    pub fn claimable_balance(env: Env, recipient: Address, asset: Address) -> i128 {
+        env.storage()
+            .persistent()
+            .get(&DataKey::ClaimableBalance(recipient, asset))
+            .unwrap_or(0)
+    }
+
     // ── Views ─────────────────────────────────────────────────────────────────
 
     pub fn is_verified(env: &Env, address: Address) -> bool {
@@ -547,6 +651,20 @@ impl SplitterV3 {
         env.storage()
             .persistent()
             .set(&DataKey::VerifiedUsers(user.clone()), &status);
+    }
+
+    /// Increment a recipient's claimable balance for a given asset.
+    fn _credit_claimable(
+        env: &Env,
+        recipient: &Address,
+        asset: &Address,
+        amount: i128,
+    ) -> Result<(), Error> {
+        let key = DataKey::ClaimableBalance(recipient.clone(), asset.clone());
+        let current: i128 = env.storage().persistent().get(&key).unwrap_or(0);
+        let updated = current.checked_add(amount).ok_or(Error::Overflow)?;
+        env.storage().persistent().set(&key, &updated);
+        Ok(())
     }
 
     fn _distribute(

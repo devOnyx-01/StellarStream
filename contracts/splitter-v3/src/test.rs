@@ -360,3 +360,106 @@ fn test_cancel_executed_split_rejected() {
     let result = s.contract.cancel_split(&s.owner, &split_id);
     assert_eq!(result, Err(Error::SplitAlreadyExecuted));
 }
+
+// ── Pull-based claimable balance tests ───────────────────────────────────────
+
+#[test]
+fn test_split_pull_credits_claimable_balances() {
+    let s = setup();
+    let alice = Address::generate(&s.env);
+    let bob = Address::generate(&s.env);
+    let token_addr = s.token.address.clone();
+
+    let mut recipients = Vec::new(&s.env);
+    recipients.push_back(Recipient { address: alice.clone(), share_bps: 7_000 });
+    recipients.push_back(Recipient { address: bob.clone(), share_bps: 3_000 });
+
+    // Use 0% fee for clean math.
+    let id = s.contract.propose_change(&s.admin_a, &AdminAction::UpdateFee(0)).unwrap();
+    s.contract.approve_proposal(&s.admin_b, &id).unwrap();
+    s.contract.execute_proposal(&s.admin_c, &id).unwrap();
+
+    s.contract.split_pull(&s.owner, &recipients, &1_000_000).unwrap();
+
+    // Tokens NOT yet in wallets — still in contract.
+    assert_eq!(s.token.balance(&alice), 0);
+    assert_eq!(s.token.balance(&bob), 0);
+
+    // Claimable balances credited correctly.
+    assert_eq!(s.contract.claimable_balance(&alice, &token_addr), 700_000);
+    assert_eq!(s.contract.claimable_balance(&bob, &token_addr), 300_000);
+}
+
+#[test]
+fn test_claim_share_transfers_and_zeroes_balance() {
+    let s = setup();
+    let alice = Address::generate(&s.env);
+    let token_addr = s.token.address.clone();
+
+    let mut recipients = Vec::new(&s.env);
+    recipients.push_back(Recipient { address: alice.clone(), share_bps: 10_000 });
+
+    let id = s.contract.propose_change(&s.admin_a, &AdminAction::UpdateFee(0)).unwrap();
+    s.contract.approve_proposal(&s.admin_b, &id).unwrap();
+    s.contract.execute_proposal(&s.admin_c, &id).unwrap();
+
+    s.contract.split_pull(&s.owner, &recipients, &500_000).unwrap();
+
+    // Alice claims her share.
+    s.contract.claim_share(&alice, &token_addr).unwrap();
+
+    assert_eq!(s.token.balance(&alice), 500_000);
+    // Balance zeroed after claim.
+    assert_eq!(s.contract.claimable_balance(&alice, &token_addr), 0);
+}
+
+#[test]
+fn test_claim_share_nothing_to_claim_rejected() {
+    let s = setup();
+    let alice = Address::generate(&s.env);
+    let token_addr = s.token.address.clone();
+
+    let result = s.contract.claim_share(&alice, &token_addr);
+    assert_eq!(result, Err(Error::NothingToClaim));
+}
+
+#[test]
+fn test_split_pull_fee_deducted_before_crediting() {
+    let s = setup();
+    let alice = Address::generate(&s.env);
+    let token_addr = s.token.address.clone();
+
+    // Default fee is 100 bps (1%).
+    let mut recipients = Vec::new(&s.env);
+    recipients.push_back(Recipient { address: alice.clone(), share_bps: 10_000 });
+
+    s.contract.split_pull(&s.owner, &recipients, &1_000_000).unwrap();
+
+    // Fee = 10_000; distributable = 990_000 → alice gets 990_000.
+    assert_eq!(s.contract.claimable_balance(&alice, &token_addr), 990_000);
+    // Treasury received the fee immediately.
+    assert_eq!(s.token.balance(&s.treasury), 10_000);
+}
+
+#[test]
+fn test_multiple_split_pulls_accumulate_balance() {
+    let s = setup();
+    let alice = Address::generate(&s.env);
+    let token_addr = s.token.address.clone();
+
+    let mut recipients = Vec::new(&s.env);
+    recipients.push_back(Recipient { address: alice.clone(), share_bps: 10_000 });
+
+    let id = s.contract.propose_change(&s.admin_a, &AdminAction::UpdateFee(0)).unwrap();
+    s.contract.approve_proposal(&s.admin_b, &id).unwrap();
+    s.contract.execute_proposal(&s.admin_c, &id).unwrap();
+
+    s.contract.split_pull(&s.owner, &recipients, &200_000).unwrap();
+    s.contract.split_pull(&s.owner, &recipients, &300_000).unwrap();
+
+    // Balances accumulate across multiple pulls before claiming.
+    assert_eq!(s.contract.claimable_balance(&alice, &token_addr), 500_000);
+
+    s.contract.claim_share(&alice, &token_addr).unwrap();
+    assert_eq!(s.token.balance(&alice), 500_000);
+}
