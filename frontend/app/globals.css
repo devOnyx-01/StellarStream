@@ -712,3 +712,51 @@ body {
     text-shadow: 0 0 5px rgba(0, 245, 255, 0.3);
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Bento Grid Dashboard Animations (Issue #522)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Ghost Glass Shimmer Animation */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+/* Bento Tile Hover Scale */
+@keyframes bento-tile-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-bento-enter {
+  animation: bento-tile-enter 0.3s ease-out forwards;
+}
+
+/* Ghost Glass Border Pulse */
+@keyframes ghost-pulse {
+  0%, 100% {
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  50% {
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+}
+
+.animate-ghost-pulse {
+  animation: ghost-pulse 3s ease-in-out infinite;
+}
