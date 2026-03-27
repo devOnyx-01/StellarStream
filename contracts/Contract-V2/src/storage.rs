@@ -118,6 +118,10 @@ pub enum DataKeyV2 {
     FeeToken, // 22
     /// Fee charged per recipient in split_multi_asset, in the FeeToken's base unit
     FeePerRecipient, // 23
+
+    // -- Issue #603 — Reentrancy Guard --------------------------------
+    /// Set to true while split_multi_asset is executing; prevents reentrant calls
+    Locked, // 24
 }
 
 /// Global stream counter.
@@ -790,4 +794,30 @@ pub fn get_fee_per_recipient(env: &Env) -> i128 {
         .instance()
         .get(&DataKeyV2::FeePerRecipient)
         .unwrap_or(0)
+}
+
+// ----------------------------------------------------------------
+// Issue #603 — Reentrancy Guard
+// ----------------------------------------------------------------
+
+/// Returns true if the contract is currently inside a multi-transfer execution.
+pub fn is_locked(env: &Env) -> bool {
+    env.storage()
+        .instance()
+        .get(&DataKeyV2::Locked)
+        .unwrap_or(false)
+}
+
+/// Acquire the reentrancy lock. Returns Err if already locked.
+pub fn acquire_lock(env: &Env) -> Result<(), crate::contracterror::Error> {
+    if is_locked(env) {
+        return Err(crate::contracterror::Error::Reentrant);
+    }
+    env.storage().instance().set(&DataKeyV2::Locked, &true);
+    Ok(())
+}
+
+/// Release the reentrancy lock.
+pub fn release_lock(env: &Env) {
+    env.storage().instance().remove(&DataKeyV2::Locked);
 }

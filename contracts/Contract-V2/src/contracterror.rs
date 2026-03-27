@@ -71,4 +71,6 @@ pub enum Error {
     PendingTreasurySplitNotFound = 46,
     /// Treasury split has already been executed
     TreasurySplitAlreadyExecuted = 47,
+    /// Reentrancy detected: contract is already executing a multi-transfer
+    Reentrant = 48,
 }

@@ -2636,6 +2636,9 @@ impl Contract {
 
         from.require_auth();
 
+        // Issue #603 — reentrancy guard: set busy flag before any external calls
+        storage::acquire_lock(&env)?;
+
         // Issue #602 — collect protocol fee before disbursements
         let fee_per_recipient = storage::get_fee_per_recipient(&env);
         if fee_per_recipient > 0 {
@@ -2650,11 +2653,15 @@ impl Contract {
 
         for entry in recipients.iter() {
             if entry.amount <= 0 {
+                storage::release_lock(&env);
                 return Err(Error::BelowDustThreshold);
             }
             let token_client = soroban_sdk::token::TokenClient::new(&env, &entry.asset);
             token_client.transfer(&from, &entry.address, &entry.amount);
         }
+
+        // Issue #603 — release lock after all transfers complete
+        storage::release_lock(&env);
 
         Ok(())
     }
