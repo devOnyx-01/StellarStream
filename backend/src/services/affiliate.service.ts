@@ -109,33 +109,4 @@ export class AffiliateService {
       take: limit,
     });
   }
-
-  /**
-   * Get all splits where the given address was the affiliate
-   */
-  async getAffiliateSplits(stellarAddress: string, limit: number = 50) {
-    const splits = await (prisma as any).stream.findMany({
-      where: { affiliateId: stellarAddress },
-      orderBy: { createdAt: "desc" },
-      take: limit,
-      select: {
-        id: true,
-        totalAmount: true,
-        token: true,
-        sender: true,
-        createdAt: true,
-        status: true,
-      },
-    });
-
-    return splits.map((s: any) => ({
-      splitId: s.id,
-      totalAmount: s.totalAmount,
-      affiliateEarned: (BigInt(s.totalAmount) * BigInt(10) / BigInt(10_000)).toString(), // 0.1%
-      token: s.token ?? "USDC",
-      sender: s.sender,
-      createdAt: s.createdAt,
-      status: s.status,
-    }));
-  }
 }

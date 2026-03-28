@@ -78,27 +78,4 @@ router.get("/leaderboard", async (req: Request, res: Response) => {
   }
 });
 
-/**
- * GET /api/v2/affiliate/splits
- * Get all splits where the caller was the affiliate_id
- */
-router.get("/splits", async (req: Request, res: Response) => {
-  try {
-    const { address } = req.query;
-
-    if (!address || typeof address !== "string") {
-      res.status(400).json({ error: "Stellar address is required" });
-      return;
-    }
-
-    const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
-    const splits = await affiliateService.getAffiliateSplits(address, limit);
-
-    res.json({ success: true, splits });
-  } catch (error) {
-    logger.error("Error fetching affiliate splits", error);
-    res.status(500).json({ error: "Failed to fetch splits" });
-  }
-});
-
 export default router;
