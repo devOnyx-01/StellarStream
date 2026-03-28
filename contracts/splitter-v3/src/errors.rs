@@ -20,4 +20,8 @@ pub enum Error {
     SplitAlreadyExecuted = 15,  // split was already executed
     SplitNotYetDue = 16,      // release_time has not been reached
     NothingToClaim = 17,      // claimable balance is zero
+    CouncilNotSet = 18,       // council keys not initialized
+    InsufficientCouncilSignatures = 19, // fewer than 5 unique valid signatures
+    DuplicateCouncilSigner = 20,        // same council key signed twice
+    InvalidCouncilSigner = 21,          // signer not in the stored council list
 }

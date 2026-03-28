@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from "@headlessui/react";
+import { getExplorerLink } from "@/lib/explorer";
 import { 
   X, 
   History, 
@@ -590,10 +591,11 @@ export function TransactionHistorySidebar({
                                   <div>
                                     <p className="text-xs text-gray-500 mb-0.5">From</p>
                                     <a
-                                      href={getStellarExpertAccountUrl(event.sender)}
+                                      href={getExplorerLink(event.hash, event.sender)}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="text-sm text-cyan-400 hover:text-cyan-300 font-mono truncate block"
+                                      title={`View ${event.sender} on Stellar.Expert`}
                                     >
                                       {event.sender}
                                     </a>
@@ -602,10 +604,11 @@ export function TransactionHistorySidebar({
                                     <div>
                                       <p className="text-xs text-gray-500 mb-0.5">To</p>
                                       <a
-                                        href={getStellarExpertAccountUrl(event.receiver)}
+                                        href={getExplorerLink(event.hash, event.receiver)}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="text-sm text-cyan-400 hover:text-cyan-300 font-mono truncate block"
+                                        title={`View ${event.receiver} on Stellar.Expert`}
                                       >
                                         {event.receiver}
                                       </a>
@@ -633,7 +636,7 @@ export function TransactionHistorySidebar({
                                   </div>
                                   
                                   <a
-                                    href={getStellarExpertUrl(event.hash)}
+                                    href={getExplorerLink(event.hash)}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 transition-colors"

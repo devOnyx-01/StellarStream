@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { ShieldAlert, ArrowLeftRight } from "lucide-react";
 import { useProtocolStatus } from "@/lib/use-protocol-status";
 import { Can } from "@/components/Can";
@@ -13,6 +13,8 @@ import type { RecoveryErrorType } from "@/components/error-recovery-cards";
 import { useHardwareWalletTimeout } from "@/lib/hooks/use-hardware-wallet-timeout";
 import { ConfirmOnDeviceModal } from "@/components/confirm-on-device-modal";
 import { LoadProposalDataButton } from "@/components/load-proposal-data-button";
+import { useWallet } from "@/lib/wallet-context";
+import { Server } from "@stellar/stellar-sdk";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface FormData {
@@ -89,6 +91,70 @@ const RATE_SECONDS: Record<FormData["rateType"], number> = {
   "per-hour": 3600,
   "per-day": 86400,
 };
+
+const HORIZON_SERVER = new Server("https://horizon.stellar.org");
+
+type RecipientValidationStatus =
+  | "ok"
+  | "missing_trustline"
+  | "account_not_funded"
+  | "invalid_address";
+
+type BalanceValidationStatus =
+  | "ok"
+  | "insufficient_asset"
+  | "insufficient_xlm"
+  | "not_connected"
+  | "pending";
+
+function getRecipientStatusLabel(status: RecipientValidationStatus): string {
+  switch (status) {
+    case "ok":
+      return "Ready to receive";
+    case "missing_trustline":
+      return "Missing Trustline";
+    case "account_not_funded":
+      return "Account Not Funded";
+    case "invalid_address":
+      return "Invalid Stellar address";
+  }
+}
+
+function parseStellarBalance(balance: string | undefined): number {
+  return balance ? parseFloat(balance) : 0;
+}
+
+function hasTrustlineForAsset(account: any, assetCode: string): boolean {
+  if (assetCode.toUpperCase() === "XLM") return true;
+  return account.balances.some((balance: any) =>
+    balance.asset_type !== "native" && balance.asset_code === assetCode
+  );
+}
+
+function getBalanceForAsset(account: any, assetCode: string): number {
+  if (assetCode.toUpperCase() === "XLM") {
+    const native = account.balances.find((balance: any) => balance.asset_type === "native");
+    return parseStellarBalance(native?.balance);
+  }
+  const asset = account.balances.find((balance: any) => balance.asset_code === assetCode);
+  return parseStellarBalance(asset?.balance);
+}
+
+function getAccountStatus(assetCode: string, account: any): RecipientValidationStatus {
+  if (!account) return "invalid_address";
+  if (assetCode.toUpperCase() === "XLM") return "ok";
+  return hasTrustlineForAsset(account, assetCode) ? "ok" : "missing_trustline";
+}
+
+function isHorizonNotFound(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const err = error as any;
+  return err?.response?.status === 404 || err?.status === 404;
+}
+
+function feeStroopsToXlm(stroops: number): number {
+  return stroops / 1e7;
+}
 
 const STEPS = [
   { number: 1, label: "Asset & Recipient", short: "Asset" },
@@ -280,9 +346,11 @@ function isValidStellarAddress(addr: string): boolean {
 function StreamSplitter({
   form,
   update,
+  recipientValidation,
 }: {
   form: FormData;
   update: (patch: Partial<FormData>) => void;
+  recipientValidation: Record<string, RecipientValidationStatus>;
 }) {
   const [focused, setFocused] = useState(false);
   const [proposalError, setProposalError] = useState<string | null>(null);
@@ -620,21 +688,41 @@ function StreamSplitter({
               <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-3">
                 <h4 className="text-xs text-white/60 uppercase tracking-wider">Split Recipients</h4>
                 <div className="mt-2 space-y-2">
-                  {splitRecipients.map((recipient, index) => (
-                    <div key={`${recipient.address}-${index}`} className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2">
-                      <div>
-                        <p className="text-xs text-white">{recipient.address}</p>
-                        <p className="text-[11px] text-white/50">{recipient.percent}%</p>
+                  {splitRecipients.map((recipient, index) => {
+                    const status = recipientValidation[recipient.address] || "ok";
+                    const warning = status !== "ok";
+                    return (
+                      <div key={`${recipient.address}-${index}`} className="rounded-lg border px-3 py-2" style={{ borderColor: warning ? "rgba(250,204,21,0.3)" : "rgba(255,255,255,0.1)", background: warning ? "rgba(250,204,21,0.08)" : "rgba(255,255,255,0.04)" }}>
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs text-white break-all">{recipient.address}</p>
+                              {warning && (
+                                <span className="text-yellow-300 text-[11px] font-semibold" title={getRecipientStatusLabel(status)}>
+                                  ⚠
+                                </span>
+                              )}
+                            </div>
+                            <p className={`text-[11px] ${warning ? "text-yellow-300" : "text-white/50"}`}>
+                              {recipient.percent}%
+                            </p>
+                            {warning && (
+                              <p className="text-[11px] text-yellow-300 mt-1">
+                                {getRecipientStatusLabel(status)}
+                              </p>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeRecipient(index)}
+                            className="text-red-400 text-xs font-medium hover:text-red-300"
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => removeRecipient(index)}
-                        className="text-red-400 text-xs font-medium hover:text-red-300"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -649,9 +737,11 @@ function StreamSplitter({
 function Step1({
   form,
   update,
+  recipientValidation,
 }: {
   form: FormData;
   update: (patch: Partial<FormData>) => void;
+  recipientValidation: Record<string, RecipientValidationStatus>;
 }) {
   const [showSwap, setShowSwap] = useState(false);
 
@@ -754,7 +844,7 @@ function Step1({
 
       <div className="h-px bg-white/[0.06]" />
 
-      <StreamSplitter form={form} update={update} />
+      <StreamSplitter form={form} update={update} recipientValidation={recipientValidation} />
 
       <div className="h-px bg-white/[0.06]" />
 
@@ -884,6 +974,10 @@ function Step3({
   onDismissRecovery,
   onAcceptFee,
   onSwapToXLM,
+  recipientValidation,
+  balanceValidation,
+  validationLoading,
+  validationError,
 }: {
   form: FormData;
   onSign: () => void;
@@ -894,6 +988,10 @@ function Step3({
   onDismissRecovery?: () => void;
   onAcceptFee?: (fee: number) => void;
   onSwapToXLM?: () => void;
+  recipientValidation: Record<string, RecipientValidationStatus>;
+  balanceValidation: BalanceValidationStatus;
+  validationLoading: boolean;
+  validationError: string | null;
 }) {
   const asset = ASSETS.find((a) => a.symbol === form.asset);
   const durationSeconds =
@@ -901,6 +999,14 @@ function Step3({
   const ratePerSec = calcRatePerSecond(form.totalAmount, durationSeconds);
   const displayRate = calcDisplayRate(ratePerSec, form.rateType);
   const endDate = durationSeconds > 0 ? new Date(Date.now() + durationSeconds * 1000) : null;
+
+  const claimableRecipients = Object.values(recipientValidation).filter((status) =>
+    status === "missing_trustline" || status === "account_not_funded"
+  );
+  const invalidRecipients = Object.values(recipientValidation).filter((status) => status === "invalid_address");
+  const hasRecipientIssues = invalidRecipients.length > 0;
+  const balanceProblem = balanceValidation !== "ok" && balanceValidation !== "pending";
+  const confirmDisabled = signing || validationLoading || hasRecipientIssues || balanceProblem;
 
   const rows = [
     { label: "Asset", value: `${asset?.icon ?? ""} ${form.asset}` },
@@ -963,6 +1069,39 @@ function Step3({
         selected={priorityTier}
         onChange={onPriorityChange}
       />
+      {validationLoading && (
+        <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.06] px-4 py-3 text-cyan-100 text-sm">
+          Verifying recipient trustlines and sender balance before allowing confirmation...
+        </div>
+      )}
+      {validationError && (
+        <div className="rounded-2xl border border-red-400/20 bg-red-400/[0.08] px-4 py-3 text-red-200 text-sm">
+          {validationError}
+        </div>
+      )}
+      {claimableRecipients.length > 0 && (
+        <div className="rounded-2xl border border-yellow-400/20 bg-yellow-400/[0.08] px-4 py-3 text-yellow-100 text-sm">
+          <p className="font-semibold">{claimableRecipients.length} recipient{claimableRecipients.length !== 1 ? "s" : ""} will need to claim their funds manually.</p>
+          <p className="mt-1 text-[11px] text-yellow-100/80">
+            The contract will create claimable balances for recipients who cannot receive the selected asset directly.
+          </p>
+        </div>
+      )}
+      {hasRecipientIssues && (
+        <div className="rounded-2xl border border-red-400/20 bg-red-400/[0.08] px-4 py-3 text-red-200 text-sm">
+          Some split recipients have an invalid Stellar address and must be corrected before submission.
+        </div>
+      )}
+      {balanceValidation === "insufficient_asset" && (
+        <div className="rounded-2xl border border-red-400/20 bg-red-400/[0.08] px-4 py-3 text-red-200 text-sm">
+          Your Stellar account does not hold enough {form.asset || "the selected asset"} to cover the total amount.
+        </div>
+      )}
+      {balanceValidation === "insufficient_xlm" && (
+        <div className="rounded-2xl border border-red-400/20 bg-red-400/[0.08] px-4 py-3 text-red-200 text-sm">
+          You do not have enough native XLM for transaction fees.
+        </div>
+      )}
       {/* ── Recovery cards ── */}
       {recoveryError === "insufficient-xlm" && (
         <InsufficientXLMCard
@@ -995,9 +1134,9 @@ function Step3({
       >
         <button
           onClick={onSign}
-          disabled={signing}
+          disabled={confirmDisabled}
           className="w-full rounded-2xl bg-cyan-400 py-4 font-body text-base font-bold text-black transition-all duration-200 hover:bg-cyan-300 disabled:opacity-60 disabled:cursor-not-allowed"
-          style={{ boxShadow: signing ? "none" : "0 0 32px rgba(34,211,238,0.35)" }}
+          style={{ boxShadow: confirmDisabled ? "none" : "0 0 32px rgba(34,211,238,0.35)" }}
         >
           {signing ? (
             <span className="flex items-center justify-center gap-2">
@@ -1085,9 +1224,15 @@ export default function CreateStreamPage() {
   const [animKey, setAnimKey] = useState(0);
   const [recoveryError, setRecoveryError] = useState<RecoveryErrorType | null>(null);
   const [signAttempts, setSignAttempts] = useState(0);
+  const [recipientValidation, setRecipientValidation] = useState<Record<string, RecipientValidationStatus>>({});
+  const [balanceValidation, setBalanceValidation] = useState<BalanceValidationStatus>("pending");
+  const [validationLoading, setValidationLoading] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const wallet = useWallet();
 
   // ── Transaction priority (#456) ──────────────────────────────────────────────
   const { tier: priorityTier, setTierId: setPriorityTierId, totalFeeStroops } = useTransactionPriority();
+  const feeStroops = totalFeeStroops(0);
 
   // ── Emergency gate (#426) ────────────────────────────────────────────────────
   const { isEmergency } = useProtocolStatus();
@@ -1104,6 +1249,95 @@ export default function CreateStreamPage() {
   const update = useCallback((patch: Partial<FormData>) => {
     setForm((prev) => ({ ...prev, ...patch }));
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const addresses = Array.from(
+      new Set(form.splitRecipients.map((recipient) => recipient.address.trim()).filter(Boolean))
+    );
+
+    if (!addresses.length || !form.asset) {
+      setRecipientValidation({});
+      return;
+    }
+
+    const validateRecipients = async () => {
+      setValidationLoading(true);
+      setValidationError(null);
+
+      const checks = await Promise.all(
+        addresses.map(async (address) => {
+          try {
+            const account = await HORIZON_SERVER.loadAccount(address);
+            return [address, getAccountStatus(form.asset, account)] as const;
+          } catch (error) {
+            const status = isHorizonNotFound(error) ? "account_not_funded" : "invalid_address";
+            return [address, status] as const;
+          }
+        })
+      );
+
+      if (!cancelled) {
+        setRecipientValidation(Object.fromEntries(checks));
+        setValidationLoading(false);
+      }
+    };
+
+    validateRecipients();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [form.splitRecipients, form.asset]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const amount = parseFloat(form.totalAmount);
+
+    if (!wallet.address || !form.asset || isNaN(amount) || amount <= 0) {
+      setBalanceValidation("pending");
+      return;
+    }
+
+    const validateBalance = async () => {
+      try {
+        const account = await HORIZON_SERVER.loadAccount(wallet.address);
+        const nativeBalance = getBalanceForAsset(account, "XLM");
+        const assetBalance = getBalanceForAsset(account, form.asset);
+        const feeXlm = feeStroops === 0 ? 0 : feeStroopsToXlm(feeStroops);
+
+        if (form.asset.toUpperCase() === "XLM") {
+          if (nativeBalance < amount + feeXlm) {
+            setBalanceValidation("insufficient_xlm");
+            return;
+          }
+        } else {
+          if (assetBalance < amount) {
+            setBalanceValidation("insufficient_asset");
+            return;
+          }
+          if (nativeBalance < feeXlm) {
+            setBalanceValidation("insufficient_xlm");
+            return;
+          }
+        }
+
+        if (!cancelled) {
+          setBalanceValidation("ok");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setBalanceValidation("insufficient_xlm");
+        }
+      }
+    };
+
+    validateBalance();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [wallet.address, form.asset, form.totalAmount, feeStroops]);
 
   const direction = step > prevStep ? "enter" : "enter";
 
@@ -1147,7 +1381,16 @@ export default function CreateStreamPage() {
     // totalFeeStroops(0) gives the fee with no simulated resource fee.
     // In production, pass the real simulated resource fee here.
     const feeStoops = totalFeeStroops(0);
-    console.info(`[CreateStream] Submitting with fee: ${feeStoops} stroops (priority: ${priorityTier.id})`);
+    const claimableRecipients = Object.values(recipientValidation).filter((status) =>
+      status === "missing_trustline" || status === "account_not_funded"
+    );
+    const contractAction = claimableRecipients.length > 0 ? "create_claimable_balances" : "split_funds";
+    console.info(
+      `[CreateStream] Submitting with fee: ${feeStoops} stroops (priority: ${priorityTier.id})`,
+    );
+    console.info(
+      `[CreateStream] Using contract action: ${contractAction} for ${claimableRecipients.length} claimable recipient${claimableRecipients.length !== 1 ? "s" : ""}`,
+    );
     setRecoveryError(null);
 
     // Get hardware wallet timeout configuration
@@ -1293,7 +1536,21 @@ export default function CreateStreamPage() {
 
                   {step === 1 && <Step1 form={form} update={update} />}
                   {step === 2 && <Step2 form={form} update={update} />}
-                  {step === 3 && <Step3 form={form} onSign={handleSign} signing={signing} priorityTier={priorityTier.id} onPriorityChange={setPriorityTierId} recoveryError={recoveryError} onDismissRecovery={() => setRecoveryError(null)} onAcceptFee={handleAcceptFee} onSwapToXLM={() => { setStep(1); setAnimKey((k) => k + 1); }} />}
+                  {step === 3 && <Step3
+                    form={form}
+                    onSign={handleSign}
+                    signing={signing}
+                    priorityTier={priorityTier.id}
+                    onPriorityChange={setPriorityTierId}
+                    recoveryError={recoveryError}
+                    onDismissRecovery={() => setRecoveryError(null)}
+                    onAcceptFee={handleAcceptFee}
+                    onSwapToXLM={() => { setStep(1); setAnimKey((k) => k + 1); }}
+                    recipientValidation={recipientValidation}
+                    balanceValidation={balanceValidation}
+                    validationLoading={validationLoading}
+                    validationError={validationError}
+                  />}
 
                   {step < 3 && (
                     <div className="flex gap-3 mt-8">

@@ -78,6 +78,7 @@ impl SplitterV3 {
 
     /// Called once by the factory. `owner` is the single-admin for #633 guards.
     /// `quorum_admins` must contain exactly 3 addresses for the quorum system.
+    /// `council_keys` must contain exactly 7 addresses for the 5-of-7 recovery.
     pub fn initialize(
         env: Env,
         owner: Address,
@@ -85,6 +86,7 @@ impl SplitterV3 {
         fee_bps: u32,
         treasury: Address,
         quorum_admins: Vec<Address>,
+        council_keys: Vec<Address>,
     ) -> Result<(), Error> {
         if env.storage().instance().has(&DataKey::Admin) {
             return Err(Error::AlreadyInitialized);
@@ -99,6 +101,7 @@ impl SplitterV3 {
         env.storage().instance().set(&DataKey::NextProposalId, &0u64);
         env.storage().instance().set(&DataKey::QuorumAdmins, &quorum_admins);
         env.storage().instance().set(&DataKey::NextSplitId, &0u64);
+        env.storage().instance().set(&DataKey::CouncilKeys, &council_keys);
 
         // Auto-verify the owner.
         Self::_set_verified(&env, &owner, true);
@@ -236,11 +239,14 @@ impl SplitterV3 {
 
     // ── Core: split ───────────────────────────────────────────────────────────
 
+    /// `affiliate` — optional partner address that receives 0.1% of `total_amount`
+    /// before the recipient list is processed.
     pub fn split(
         env: Env,
         sender: Address,
         recipients: Vec<Recipient>,
         total_amount: i128,
+        affiliate: Option<Address>,
     ) -> Result<(), Error> {
         sender.require_auth();
 
@@ -263,9 +269,30 @@ impl SplitterV3 {
         let contract_addr = env.current_contract_address();
         token_client.transfer(&sender, &contract_addr, &total_amount);
 
+        // ── Affiliate fee: 0.1% deducted first ───────────────────────────────
+        let affiliate_amount = if let Some(ref affiliate_addr) = affiliate {
+            // 10 bps = 0.1%
+            let a = total_amount
+                .checked_mul(10)
+                .ok_or(Error::Overflow)?
+                / 10_000;
+            if a > 0 {
+                token_client.transfer(&contract_addr, affiliate_addr, &a);
+                env.events().publish((symbol_short!("affiliate"),), a);
+            }
+            a
+        } else {
+            0
+        };
+
+        let after_affiliate = total_amount
+            .checked_sub(affiliate_amount)
+            .ok_or(Error::Overflow)?;
+
+        // ── Protocol fee ──────────────────────────────────────────────────────
         let fee_bps: u32 = env.storage().instance().get(&DataKey::FeeBps).unwrap_or(0);
         let fee_amount = if fee_bps > 0 {
-            let f = total_amount
+            let f = after_affiliate
                 .checked_mul(fee_bps as i128)
                 .ok_or(Error::Overflow)?
                 / 10_000;
@@ -277,7 +304,7 @@ impl SplitterV3 {
         } else {
             0
         };
-        let distributable = total_amount.checked_sub(fee_amount).ok_or(Error::Overflow)?;
+        let distributable = after_affiliate.checked_sub(fee_amount).ok_or(Error::Overflow)?;
 
         if strict {
             for r in recipients.iter() {
@@ -499,12 +526,13 @@ impl SplitterV3 {
     /// `claim_share` to actually receive their funds.
     ///
     /// This avoids failures caused by missing trustlines on the recipient side.
-    /// The fee is still deducted and forwarded to the treasury immediately.
+    /// The affiliate fee (0.1%) and protocol fee are still deducted immediately.
     pub fn split_pull(
         env: Env,
         sender: Address,
         recipients: Vec<Recipient>,
         total_amount: i128,
+        affiliate: Option<Address>,
     ) -> Result<(), Error> {
         sender.require_auth();
 
@@ -523,10 +551,29 @@ impl SplitterV3 {
         // Pull the full amount into the contract.
         token_client.transfer(&sender, &contract_addr, &total_amount);
 
-        // Deduct fee and forward to treasury immediately.
+        // ── Affiliate fee: 0.1% deducted first ───────────────────────────────
+        let affiliate_amount = if let Some(ref affiliate_addr) = affiliate {
+            let a = total_amount
+                .checked_mul(10)
+                .ok_or(Error::Overflow)?
+                / 10_000;
+            if a > 0 {
+                token_client.transfer(&contract_addr, affiliate_addr, &a);
+                env.events().publish((symbol_short!("affiliate"),), a);
+            }
+            a
+        } else {
+            0
+        };
+
+        let after_affiliate = total_amount
+            .checked_sub(affiliate_amount)
+            .ok_or(Error::Overflow)?;
+
+        // ── Protocol fee ──────────────────────────────────────────────────────
         let fee_bps: u32 = env.storage().instance().get(&DataKey::FeeBps).unwrap_or(0);
         let fee_amount = if fee_bps > 0 {
-            let f = total_amount
+            let f = after_affiliate
                 .checked_mul(fee_bps as i128)
                 .ok_or(Error::Overflow)?
                 / 10_000;
@@ -538,7 +585,7 @@ impl SplitterV3 {
         } else {
             0
         };
-        let distributable = total_amount.checked_sub(fee_amount).ok_or(Error::Overflow)?;
+        let distributable = after_affiliate.checked_sub(fee_amount).ok_or(Error::Overflow)?;
 
         // Credit each recipient's claimable balance — no token transfer yet.
         for r in recipients.iter() {
@@ -619,6 +666,101 @@ impl SplitterV3 {
 
     pub fn admin(env: Env) -> Address {
         env.storage().instance().get(&DataKey::Admin).unwrap()
+    }
+
+    pub fn council_keys(env: Env) -> Vec<Address> {
+        env.storage()
+            .instance()
+            .get(&DataKey::CouncilKeys)
+            .unwrap_or_else(|| Vec::new(&env))
+    }
+
+    // ── #recovery: 5-of-7 Council emergency split ─────────────────────────────
+
+    /// Safety-valve: allows a 5-out-of-7 Council to split and move funds when
+    /// the primary admin keys are lost.
+    ///
+    /// `council_signatures` — exactly 5 or more distinct Council addresses that
+    /// have called `require_auth()`.  The contract validates each against the
+    /// 7 keys stored at initialization.  Duplicate signers are rejected.
+    pub fn recovery_split(
+        env: Env,
+        council_signatures: Vec<Address>,
+        recipients: Vec<Recipient>,
+        total_amount: i128,
+    ) -> Result<(), Error> {
+        // Load the stored council keys.
+        let council_keys: Vec<Address> = env
+            .storage()
+            .instance()
+            .get(&DataKey::CouncilKeys)
+            .ok_or(Error::CouncilNotSet)?;
+
+        // Require auth from every signer in the provided list.
+        for signer in council_signatures.iter() {
+            signer.require_auth();
+        }
+
+        // Validate: need at least 5 unique valid signers.
+        if council_signatures.len() < 5 {
+            return Err(Error::InsufficientCouncilSignatures);
+        }
+
+        // Check each signer is in the council list and not duplicated.
+        let mut validated: u32 = 0;
+        for signer in council_signatures.iter() {
+            // Duplicate check against already-validated signers.
+            let mut dup = false;
+            let mut count: u32 = 0;
+            for other in council_signatures.iter() {
+                if other == signer {
+                    count += 1;
+                }
+            }
+            if count > 1 {
+                dup = true;
+            }
+            if dup {
+                return Err(Error::DuplicateCouncilSigner);
+            }
+
+            // Membership check.
+            let mut found = false;
+            for key in council_keys.iter() {
+                if key == signer {
+                    found = true;
+                    break;
+                }
+            }
+            if !found {
+                return Err(Error::InvalidCouncilSigner);
+            }
+            validated += 1;
+        }
+
+        if validated < 5 {
+            return Err(Error::InsufficientCouncilSignatures);
+        }
+
+        // Validate recipient shares.
+        let mut bps_sum: u32 = 0;
+        for r in recipients.iter() {
+            bps_sum = bps_sum.checked_add(r.share_bps).ok_or(Error::Overflow)?;
+        }
+        if bps_sum != 10_000 {
+            return Err(Error::InvalidSplit);
+        }
+
+        let token_addr: Address = env.storage().instance().get(&DataKey::Token).unwrap();
+        let token_client = token::Client::new(&env, &token_addr);
+        let contract_addr = env.current_contract_address();
+
+        Self::_distribute(&env, &token_client, &contract_addr, &recipients, total_amount)?;
+
+        env.events()
+            .publish((symbol_short!("recovery"),), total_amount);
+
+        Ok(())
     }
 
     // ── Internal helpers ──────────────────────────────────────────────────────

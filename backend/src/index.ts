@@ -29,6 +29,7 @@ import { StaleStreamCleanupWorker } from "./stale-stream-cleanup.worker.js";
 import { DataIntegrityWorker } from "./data-integrity.worker.js";
 import { YieldAccrualWorker } from "./yield-accrual.worker.js";
 import { startWebhookWorker } from "./webhook-dispatcher.worker.js";
+import { XlmBufferMonitorWorker } from "./xlm-buffer-monitor.worker.js";
 import { bigintSerializer } from "./middleware/bigintSerializer.js";
 import { swaggerSpec } from "./swagger.js";
 import { swaggerV3Spec } from "./api/v3/swagger.js";
@@ -57,6 +58,7 @@ export const ttlMonitor = new TTLArchivalMonitorService(wsService);
 const cleanupWorker = new StaleStreamCleanupWorker();
 const dataIntegrityWorker = new DataIntegrityWorker();
 const yieldAccrualWorker = new YieldAccrualWorker();
+const xlmBufferMonitor = new XlmBufferMonitorWorker();
 
 // ── Security middleware ────────────────────────────────────────────────────────
 app.use(
@@ -184,6 +186,7 @@ async function start(): Promise<void> {
   cleanupWorker.start();
   dataIntegrityWorker.start();
   yieldAccrualWorker.start();
+  xlmBufferMonitor.start();
   startWebhookWorker();
   
   // Start background services
@@ -204,6 +207,7 @@ function shutdown(signal: string): void {
   cleanupWorker.stop();
   dataIntegrityWorker.stop();
   yieldAccrualWorker.stop();
+  xlmBufferMonitor.stop();
   bridgeObserver.stop();
   ttlMonitor.stop();
   closeRedis()

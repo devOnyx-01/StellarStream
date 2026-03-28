@@ -19,7 +19,10 @@ import {
   ShieldCheck,
   Menu,
   X,
-  Share2,
+  ScrollText,
+  Rocket,
+  Coins,
+  FileText,
 } from "lucide-react";
 import { TransactionQueueManager } from "@/components/dashboard/TransactionQueueManager";
 
@@ -111,9 +114,29 @@ export function Sidebar({ onOpenAuditLog }: SidebarProps) {
     },
     { label: "Settings", href: "/dashboard/settings", icon: Settings },
     {
+      label: "Approval Policies",
+      href: "/dashboard/policies",
+      icon: ScrollText,
+    },
+    {
       label: "Security Vault",
       href: "/dashboard/security-vault",
       icon: ShieldAlert,
+    },
+    {
+      label: "Emergency Stop",
+      href: "/dashboard/emergency-stop",
+      icon: ShieldAlert,
+    },
+    {
+      label: "Deploy Splitter",
+      href: "/dashboard/deploy-splitter",
+      icon: Rocket,
+    },
+    {
+      label: "Dust Recovery",
+      href: "/dashboard/dust-recovery",
+      icon: Coins,
     },
   ];
 
