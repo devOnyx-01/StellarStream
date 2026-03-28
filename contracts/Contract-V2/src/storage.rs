@@ -139,6 +139,10 @@ pub enum DataKeyV2 {
     PendingRateUpdate(u64), // 28
     /// Timestamp when pending rate update was set (for TTL tracking)
     PendingRateUpdateExpiry(u64), // 29
+
+    // -- Issue #632 — Gas Tank Buffer ----------------------------------
+    /// Per-sender XLM gas buffer in stroops.
+    GasBuffer(Address), // 30
 }
 
 /// Global stream counter.
@@ -752,6 +756,24 @@ pub fn get_fee_per_recipient(env: &Env) -> i128 {
     env.storage()
         .instance()
         .get(&DataKeyV2::FeePerRecipient)
+        .unwrap_or(0)
+}
+
+// ----------------------------------------------------------------
+// Issue #632 — Gas Tank Buffer
+// ----------------------------------------------------------------
+
+/// Set a sender's internal gas buffer (in stroops).
+pub fn set_gas_buffer(env: &Env, sender: &Address, amount: i128) {
+    env.storage().instance().set(&DataKeyV2::GasBuffer(sender.clone()), &amount);
+    bump_instance(env);
+}
+
+/// Get a sender's internal gas buffer (in stroops).
+pub fn get_gas_buffer(env: &Env, sender: &Address) -> i128 {
+    env.storage()
+        .instance()
+        .get(&DataKeyV2::GasBuffer(sender.clone()))
         .unwrap_or(0)
 }
 

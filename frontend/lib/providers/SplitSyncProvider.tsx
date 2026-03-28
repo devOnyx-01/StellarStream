@@ -36,8 +36,15 @@ interface SplitSyncContextValue {
     /** proposalId → address of whoever is currently editing */
     activeEditors: Record<string, string>;
     connected: boolean;
-    /** Clear all local draft proposals */
-    clearLocalDrafts: () => void;
+    /**
+     * Clone a past disbursement into a new draft for the current month.
+     * Copies the recipient list, resets timestamps, and marks it "pending".
+     * Returns the new draft's ID so callers can navigate to it.
+     */
+    cloneDisbursement: (source: DraftProposal) => string;
+    /** ID of the most recently cloned draft — used to trigger balance check */
+    pendingBalanceCheckId: string | null;
+    clearPendingBalanceCheck: () => void;
 }
 
 const SplitSyncContext = createContext<SplitSyncContextValue | null>(null);
@@ -63,37 +70,28 @@ export function SplitSyncProvider({ children, userAddress }: SplitSyncProviderPr
     const [proposals, setProposals] = useState<DraftProposal[]>([]);
     const [activeEditors, setActiveEditors] = useState<Record<string, string>>({});
     const [connected, setConnected] = useState(false);
+    const [pendingBalanceCheckId, setPendingBalanceCheckId] = useState<string | null>(null);
     const socketRef = useRef<Socket | null>(null);
 
-    // ── Persistence ───────────────────────────────────────────────────────────
-
-    // Load from localStorage on mount
-    useEffect(() => {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                if (Array.isArray(parsed)) {
-                    setProposals(parsed);
-                }
-            } catch (err) {
-                console.error("[SplitSyncProvider] Failed to load drafts from localStorage", err);
-            }
-        }
+    const cloneDisbursement = useCallback((source: DraftProposal): string => {
+        const now = new Date();
+        const newId = `clone-${source.id}-${now.getTime()}`;
+        const monthLabel = now.toLocaleString("en-US", { month: "long", year: "numeric" });
+        const draft: DraftProposal = {
+            ...source,
+            id: newId,
+            title: `${source.title} — ${monthLabel}`,
+            status: "pending",
+            createdAt: now.toISOString(),
+            expiresAt: new Date(now.getTime() + 1000 * 60 * 60 * 48).toISOString(),
+        };
+        setProposals((prev) => [draft, ...prev]);
+        setPendingBalanceCheckId(newId);
+        return newId;
     }, []);
 
-    // Save to localStorage on change
-    useEffect(() => {
-        if (proposals.length > 0) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(proposals));
-        } else {
-            localStorage.removeItem(STORAGE_KEY);
-        }
-    }, [proposals]);
-
-    const clearLocalDrafts = useCallback(() => {
-        setProposals([]);
-        localStorage.removeItem(STORAGE_KEY);
+    const clearPendingBalanceCheck = useCallback(() => {
+        setPendingBalanceCheckId(null);
     }, []);
 
     const applyDraftUpdated = useCallback((payload: DraftUpdatedPayload) => {
@@ -147,9 +145,7 @@ export function SplitSyncProvider({ children, userAddress }: SplitSyncProviderPr
     }, [userAddress, applyDraftUpdated, applyEditorPresence]);
 
     return (
-        <SplitSyncContext.Provider
-            value={{ proposals, setProposals, activeEditors, connected, clearLocalDrafts }}
-        >
+        <SplitSyncContext.Provider value={{ proposals, setProposals, activeEditors, connected, cloneDisbursement, pendingBalanceCheckId, clearPendingBalanceCheck }}>
             {children}
         </SplitSyncContext.Provider>
     );

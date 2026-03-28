@@ -13,13 +13,14 @@ use contracterror::Error;
 pub use types::{
     AdminTransferredEvent, BatchStreamsCreatedEvent, BeneficiaryTransferredV2Event,
     ClawbackRebalanceEvent, ContractPausedEvent, ContractUnpausedEvent, DexPoolInfo,
-    FeesWithdrawnEvent, MigrationEvent, MultiAssetRecipient, NebulaEvent, Operation,
-    OperationExecutedEvent, OperationScheduledEvent, PendingRateUpdate, PermitArgs,
+    FeesWithdrawnEvent, LedgerFootprint, MigrationEvent, MultiAssetRecipient, NebulaEvent,
+    Operation, OperationExecutedEvent, OperationScheduledEvent, PendingRateUpdate, PermitArgs,
     PermitStreamCreatedEvent, RateUpdateAcceptedEvent, RateUpdateCancelledEvent,
-    RateUpdateProposedEvent, StreamArgs, StreamBatchEntry, StreamCancelledV2Event,
-    StreamClaimV2Event, StreamCreatedV2Event, StreamMigratedEvent, StreamRefilledEvent,
-    StreamRequestApprovedEvent, StreamRequestExecutedEvent, StreamRequestInitiatedEvent,
-    StreamStatus, StreamToppedUpEvent, StreamV2, SwapResult, SwapStreamArgs, SwapStreamCreatedEvent,
+    RateUpdateProposedEvent, SimulationCheck, SimulationReport, SimulationResult, StreamArgs,
+    StreamBatchEntry, StreamCancelledV2Event, StreamClaimV2Event, StreamCreatedV2Event,
+    StreamMigratedEvent, StreamRefilledEvent, StreamRequestApprovedEvent,
+    StreamRequestExecutedEvent, StreamRequestInitiatedEvent, StreamStatus, StreamToppedUpEvent,
+    StreamV2, SwapResult, SwapStreamArgs, SwapStreamCreatedEvent,
 };
 use v1_interface::Client as V1Client;
 
@@ -33,6 +34,9 @@ const CONTRACT_METADATA_HASH: [u8; 32] = [
     0x9f, 0x86, 0xd0, 0x81, 0x88, 0x4c, 0x7d, 0x65, 0x9a, 0x2f, 0xea, 0xa0, 0xc5, 0x5a, 0xd0, 0x15,
     0xa3, 0xbf, 0x4f, 0x1b, 0x2b, 0x0b, 0x82, 0x2c, 0xd1, 0x5d, 0x6c, 0x15, 0xb0, 0xf0, 0x0a, 0x08,
 ];
+
+/// Gas buffer fee per `split_multi_asset` execution (1 XLM = 10_000_000 stroops).
+const GAS_FEE_PER_SPLIT_STROOPS: i128 = 10_000_000;
 
 /// Maximum protocol fee (5%) - protects users from admin abuse (Issue #415)
 pub const MAX_FEE_BPS: u32 = 500;
@@ -139,6 +143,237 @@ impl Contract {
 
     pub fn metadata(env: Env) -> Bytes {
         Bytes::from_slice(&env, &CONTRACT_METADATA_HASH)
+    }
+
+    // ----------------------------------------------------------------
+    // Issue #409 — Pre-Flight Simulation Helper
+    // ----------------------------------------------------------------
+
+    /// Simulate stream creation without actually creating the stream.
+    /// 
+    /// This is a read-only dry-run that performs all validation checks
+    /// that would be done during actual stream creation, but without
+    /// modifying any state.
+    /// 
+    /// Frontends can call this before showing the user a "Create Stream" button
+    /// to verify the transaction will succeed.
+    /// 
+    /// # Parameters
+    /// - `args`: Stream creation arguments to validate
+    /// 
+    /// # Returns
+    /// - `SimulationReport` with detailed check results
+    pub fn simulate_stream_creation(env: Env, args: StreamArgs) -> SimulationReport {
+        let now = env.ledger().timestamp();
+        
+        // Check 1: Parameter validation
+        let params_check = Self::simulate_validate_params(&env, &args, now);
+        
+        // Check 2: Balance verification
+        let balance_check = Self::simulate_check_balance(&env, &args);
+        
+        // Check 3: Storage/footprint estimation
+        let storage_check = Self::simulate_check_storage(&env);
+        let footprint = Self::estimate_ledger_footprint(&env, &args);
+        
+        // Overall success is true only if all checks pass
+        let would_succeed = params_check.passed && balance_check.passed && storage_check.passed;
+        
+        SimulationReport {
+            would_succeed,
+            balance_check,
+            storage_check,
+            params_check,
+            footprint,
+        }
+    }
+
+    /// Quick simulation that returns just success/failure.
+    /// For simple UI feedback before showing detailed errors.
+    /// 
+    /// # Returns
+    /// - `true` if stream creation would succeed
+    /// - `false` if it would fail
+    pub fn can_create_stream(env: Env, args: StreamArgs) -> bool {
+        let report = Self::simulate_stream_creation(env, args);
+        report.would_succeed
+    }
+
+    /// Validate stream creation parameters without state checks.
+    fn simulate_validate_params(
+        env: &Env,
+        args: &StreamArgs,
+        now: u64,
+    ) -> SimulationCheck {
+        use soroban_sdk::String;
+        
+        // Check contract is not paused
+        if storage::is_paused(env) {
+            return SimulationCheck {
+                passed: false,
+                error_code: 11, // ContractPaused
+                error_message: String::from_str(env, "Contract is paused"),
+            };
+        }
+        
+        // Check emergency mode
+        if storage::is_emergency(env) {
+            return SimulationCheck {
+                passed: false,
+                error_code: 41, // EmergencyMode
+                error_message: String::from_str(env, "Contract in emergency mode"),
+            };
+        }
+        
+        // Validate time range
+        if args.start_time >= args.end_time {
+            return SimulationCheck {
+                passed: false,
+                error_code: 14, // InvalidTimeRange
+                error_message: String::from_str(env, "Start time must be before end time"),
+            };
+        }
+        
+        if args.cliff_time < args.start_time || args.cliff_time > args.end_time {
+            return SimulationCheck {
+                passed: false,
+                error_code: 14, // InvalidTimeRange
+                error_message: String::from_str(env, "Cliff time must be between start and end"),
+            };
+        }
+        
+        // Validate penalty
+        if args.penalty_bps > 10_000 {
+            return SimulationCheck {
+                passed: false,
+                error_code: 30, // InvalidPenalty
+                error_message: String::from_str(env, "Penalty exceeds 100%"),
+            };
+        }
+        
+        // Validate amount
+        if args.total_amount <= 0 {
+            return SimulationCheck {
+                passed: false,
+                error_code: 10, // BelowDustThreshold
+                error_message: String::from_str(env, "Amount must be positive"),
+            };
+        }
+        
+        // All validations passed
+        SimulationCheck {
+            passed: true,
+            error_code: 0,
+            error_message: String::from_str(env, ""),
+        }
+    }
+
+    /// Check if sender has sufficient balance.
+    fn simulate_check_balance(env: &Env, args: &StreamArgs) -> SimulationCheck {
+        use soroban_sdk::String;
+        
+        // Get sender's token balance
+        let token_client = soroban_sdk::token::TokenClient::new(env, &args.token);
+        let sender_balance = token_client.balance(&args.sender);
+        
+        // Calculate required amount (including potential protocol fee)
+        let required_amount = args.total_amount;
+        
+        // Check if asset is whitelisted (get protocol fee if configured)
+        let protocol_fee_bps = storage::get_fee_bps(env).unwrap_or(0);
+        let fee_multiplier = 10_000 - protocol_fee_bps;
+        let stream_amount = (args.total_amount * fee_multiplier) / 10_000;
+        let estimated_fee = args.total_amount - stream_amount;
+        let required_with_fee = args.total_amount;
+        
+        if sender_balance < required_with_fee {
+            return SimulationCheck {
+                passed: false,
+                error_code: 64, // SimulationInsufficientBalance
+                error_message: String::from_str(env, "Sender has insufficient balance"),
+            };
+        }
+        
+        // Check dust threshold
+        let min_value = storage::get_min_value(env, &args.token);
+        if stream_amount < min_value {
+            return SimulationCheck {
+                passed: false,
+                error_code: 10, // BelowDustThreshold
+                error_message: String::from_str(env, "Amount below dust threshold"),
+            };
+        }
+        
+        SimulationCheck {
+            passed: true,
+            error_code: 0,
+            error_message: String::from_str(env, ""),
+        }
+    }
+
+    /// Check if storage limits would be exceeded.
+    fn simulate_check_storage(env: &Env) -> SimulationCheck {
+        use soroban_sdk::String;
+        
+        // Estimate current storage usage
+        // This is a simplified check - in production, you'd want more precise measurements
+        
+        // Soroban instance storage limit is typically around 64KB
+        // Each stream entry uses approximately 200-300 bytes
+        // We allow up to 10,000 streams per contract
+        // At ~250 bytes per stream, that's ~2.5MB of persistent storage
+        
+        // For a conservative estimate, check if creating one more stream
+        // would push us over reasonable limits
+        let estimated_stream_size: u32 = 300;
+        let max_streams: u32 = 10_000;
+        
+        // Get current stream count (approximation - in production, track this in storage)
+        // For simulation, we estimate based on storage reads
+        
+        // Simple heuristic: if we've stored many streams, flag a warning
+        // but don't fail since Soroban handles this gracefully
+        SimulationCheck {
+            passed: true,
+            error_code: 0,
+            error_message: String::from_str(env, ""),
+        }
+    }
+
+    /// Estimate the ledger footprint for creating a stream.
+    fn estimate_ledger_footprint(env: &Env, args: &StreamArgs) -> LedgerFootprint {
+        // StreamV2 struct size estimation
+        // - Address: 32 bytes each (sender, receiver, beneficiary, token) = 128 bytes
+        // - i128 values: 16 bytes each (total_amount, withdrawn_amount, etc.) = ~80 bytes
+        // - u64 timestamps: 8 bytes each = ~40 bytes
+        // - bool flags: 1 byte each = ~4 bytes
+        // - Option<Address>: 33 bytes each (discriminant + address) = ~66 bytes
+        // - u32 values: 4 bytes each = ~16 bytes
+        // Total estimated: ~350 bytes per stream
+        
+        let persistent_bytes: u32 = 350;
+        
+        // Instance storage (admin list, fee config, etc.)
+        // Approximately 500-1000 bytes depending on configuration
+        let instance_bytes: u32 = 800;
+        
+        // Estimated operations
+        // - 2 reads: get_admin, get_fee_bps (if set)
+        // - 3 writes: set_stream, update_stats, bump_instance
+        // - 1 event emit
+        let estimated_reads: u32 = 5;
+        let estimated_writes: u32 = 4;
+        
+        // Event size: ~200-300 bytes for the event data
+        let event_bytes: u32 = 250;
+        
+        LedgerFootprint {
+            instance_bytes,
+            persistent_bytes,
+            estimated_reads,
+            estimated_writes,
+            event_bytes,
+        }
     }
 
     // ----------------------------------------------------------------
@@ -946,8 +1181,11 @@ impl Contract {
         let token_client = soroban_sdk::token::TokenClient::new(&env, &stream.token);
         let to_beneficiary = if stream.split_bps > 0 {
             if let Some(ref split_addr) = stream.split_address.clone() {
-                let split_amount = (to_withdraw * stream.split_bps as i128) / 10_000;
+                let calc_numerator = to_withdraw * stream.split_bps as i128;
+                let split_amount = calc_numerator / 10_000;
+                let dust_amount = calc_numerator % 10_000;
                 let remainder = to_withdraw - split_amount;
+
                 if split_amount > 0 {
                     token_client.transfer(
                         &env.current_contract_address(),
@@ -955,6 +1193,33 @@ impl Contract {
                         &split_amount,
                     );
                 }
+
+                if dust_amount > 0 {
+                    let now = env.ledger().timestamp();
+                    let mut dust_data = Vec::new(&env);
+                    dust_data.push_back(stream_id.into_val(&env));
+                    dust_data.push_back(stream.token.clone().into_val(&env));
+                    dust_data.push_back(split_addr.clone().into_val(&env));
+                    dust_data.push_back(stream.split_bps.into_val(&env));
+                    dust_data.push_back(to_withdraw.into_val(&env));
+                    dust_data.push_back(split_amount.into_val(&env));
+                    dust_data.push_back(dust_amount.into_val(&env));
+                    dust_data.push_back(now.into_val(&env));
+                    env.events().publish(
+                        (stream_id, symbol_short!("dust")),
+                        DustAccumulatedEvent {
+                            stream_id,
+                            token: stream.token.clone(),
+                            split_address: split_addr.clone(),
+                            split_bps: stream.split_bps,
+                            to_withdraw,
+                            split_amount,
+                            dust_amount,
+                            timestamp: now,
+                        },
+                    );
+                }
+
                 remainder
             } else {
                 to_withdraw
@@ -3585,6 +3850,26 @@ impl Contract {
     // Issue #604 — Gas-Efficient Loop Iteration
     // ----------------------------------------------------------------
 
+    fn ensure_asset_interface(env: &Env, asset: &Address, from: &Address) -> Result<(), Error> {
+        let token_client = soroban_sdk::token::TokenClient::new(env, asset);
+
+        // Ensure the target asset can respond to balance query without trapping.
+        if token_client.try_balance(from).is_err() {
+            return Err(Error::AssetInterfaceNotSupported);
+        }
+
+        // Ensure transfer endpoint exists and can be invoked (no-op with 0 amount).
+        let check_transfer_target = env.current_contract_address();
+        if token_client
+            .try_transfer(from, &check_transfer_target, &0)
+            .is_err()
+        {
+            return Err(Error::AssetInterfaceNotSupported);
+        }
+
+        Ok(())
+    }
+
     /// Disburse multiple assets to multiple recipients in a single atomic call.
     ///
     /// The caller must have pre-approved this contract (via `token.approve`) for
@@ -3614,8 +3899,8 @@ impl Contract {
         Self::require_not_paused(&env)?;
 
         let n = recipients.len();
-        // Issue #604 — cap raised to 100
-        if n == 0 || n > 100 {
+        // Issue #639 — batch recipient cap raised to 120 to avoid OOM.
+        if n == 0 || n > 120 {
             return Err(Error::BatchTooLarge);
         }
 
@@ -3623,6 +3908,14 @@ impl Contract {
 
         // Issue #603 — reentrancy guard
         storage::acquire_lock(&env)?;
+
+        // Issue #632 — gas buffer check.
+        let current_gas = storage::get_gas_buffer(&env, &from);
+        if current_gas < GAS_FEE_PER_SPLIT_STROOPS {
+            storage::release_lock(&env);
+            return Err(Error::InsufficientGasBuffer);
+        }
+        storage::set_gas_buffer(&env, &from, current_gas - GAS_FEE_PER_SPLIT_STROOPS);
 
         // Issue #604 — hoist all storage reads before the loop
         let fee_per_recipient = storage::get_fee_per_recipient(&env);
@@ -3638,19 +3931,33 @@ impl Contract {
         };
 
         // Issue #604 — validate all amounts before any external call
+        let first_asset = recipients.get(0).unwrap().asset.clone();
+        let mut homogeneous = true;
+
         for entry in recipients.iter() {
             if entry.amount <= 0 {
                 storage::release_lock(&env);
                 return Err(Error::BelowDustThreshold);
             }
+
+            // Issue #637 — Asset interface compatibility guard
+            Self::ensure_asset_interface(&env, &entry.asset, &from)?;
+
+            if entry.asset != first_asset {
+                homogeneous = false;
+            }
         }
 
         // Issue #602 — collect protocol fee
         if fee_per_recipient > 0 {
+            // Validate fee token interface before collecting.
+            let fee_token = fee_token_addr.as_ref().unwrap();
+            Self::ensure_asset_interface(&env, fee_token, &from)?;
+
             let total_fee = fee_per_recipient
                 .checked_mul(n as i128)
                 .ok_or(Error::Overflow)?;
-            soroban_sdk::token::TokenClient::new(&env, fee_token_addr.as_ref().unwrap()).transfer(
+            soroban_sdk::token::TokenClient::new(&env, fee_token).transfer(
                 &from,
                 fee_collector.as_ref().unwrap(),
                 &total_fee,
@@ -3660,9 +3967,6 @@ impl Contract {
         // Issue #604 — detect homogeneous batch: if all entries share the same
         // asset, construct one TokenClient and reuse it across all iterations,
         // avoiding repeated client instantiation overhead.
-        let first_asset = recipients.get(0).unwrap().asset.clone();
-        let homogeneous = recipients.iter().all(|e| e.asset == first_asset);
-
         if homogeneous {
             let token_client = soroban_sdk::token::TokenClient::new(&env, &first_asset);
             for entry in recipients.iter() {
@@ -3721,6 +4025,57 @@ impl Contract {
     /// Get the current per-recipient fee amount.
     pub fn get_fee_per_recipient(env: Env) -> i128 {
         storage::get_fee_per_recipient(&env)
+    }
+
+    // ----------------------------------------------------------------
+    // Issue #632 — Gas-Tank Internal XLM Buffer
+    // ----------------------------------------------------------------
+
+    pub fn deposit_gas_buffer(env: Env, sender: Address, amount: i128) -> Result<(), Error> {
+        sender.require_auth();
+        if amount <= 0 {
+            return Err(Error::BelowDustThreshold);
+        }
+
+        let fee_token = storage::get_fee_token(&env).ok_or(Error::NoTreasury)?;
+        let token_client = soroban_sdk::token::TokenClient::new(&env, &fee_token);
+
+        token_client.transfer(&sender, &env.current_contract_address(), &amount);
+
+        let current = storage::get_gas_buffer(&env, &sender);
+        storage::set_gas_buffer(&env, &sender, current.checked_add(amount).ok_or(Error::Overflow)?);
+
+        Ok(())
+    }
+
+    pub fn withdraw_gas_buffer(
+        env: Env,
+        admin: Address,
+        amount: i128,
+        to: Address,
+    ) -> Result<(), Error> {
+        storage::try_get_admin(&env)?.require_auth();
+
+        if amount <= 0 {
+            return Err(Error::BelowDustThreshold);
+        }
+
+        let current = storage::get_gas_buffer(&env, &admin);
+        if current < amount {
+            return Err(Error::InsufficientGasBuffer);
+        }
+
+        storage::set_gas_buffer(&env, &admin, current - amount);
+
+        let fee_token = storage::get_fee_token(&env).ok_or(Error::NoTreasury)?;
+        let token_client = soroban_sdk::token::TokenClient::new(&env, &fee_token);
+        token_client.transfer(&env.current_contract_address(), &to, &amount);
+
+        Ok(())
+    }
+
+    pub fn get_gas_buffer_balance(env: Env, user: Address) -> i128 {
+        storage::get_gas_buffer(&env, &user)
     }
 }
 

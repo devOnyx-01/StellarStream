@@ -27,4 +27,6 @@ pub enum DataKey {
     ScheduledSplit(u64),
     /// persistent() — claimable balance keyed by (recipient, asset)
     ClaimableBalance(Address, Address),
+    /// instance() — 7 council public keys stored at initialization for recovery
+    CouncilKeys,
 }

@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use super::*;
-use crate::types::{PermitArgs, PendingRateUpdate, StreamArgs, SwapStreamArgs};
+use crate::types::{PermitArgs, PendingRateUpdate, SimulationReport, StreamArgs, SwapStreamArgs};
 use soroban_sdk::{
     testutils::{Address as _, Ledger},
     token::TokenClient,
@@ -1284,6 +1284,139 @@ fn test_create_stream_with_fee_requires_treasury() {
 }
 
 #[test]
+fn test_gas_buffer_deposit_withdraw_and_query() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let beneficiary = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let (token_id, token_client, asset_client) = create_token(&env, &token_admin);
+
+    asset_client.mint(&admin, &1_000_000_000);
+
+    let (_, v2_client) = setup_v2(&env, &admin);
+    v2_client.set_fee_token(&token_id);
+
+    // Initial buffer is empty.
+    assert_eq!(v2_client.get_gas_buffer_balance(&admin), 0);
+
+    // Deposit 100M stroops into sender's buffer.
+    let deposit_amount = 100_000_000;
+    v2_client.deposit_gas_buffer(&admin, &deposit_amount).unwrap();
+    assert_eq!(v2_client.get_gas_buffer_balance(&admin), deposit_amount);
+
+    // Withdraw 40M to beneficiary.
+    v2_client
+        .withdraw_gas_buffer(&admin, &40_000_000, &beneficiary)
+        .unwrap();
+    assert_eq!(v2_client.get_gas_buffer_balance(&admin), 60_000_000);
+    assert_eq!(token_client.balance(&beneficiary), 40_000_000);
+}
+
+#[test]
+fn test_split_multi_asset_requires_gas_buffer() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let sender = Address::generate(&env);
+    let receiver1 = Address::generate(&env);
+    let receiver2 = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let (token_id, token_client, asset_client) = create_token(&env, &token_admin);
+
+    asset_client.mint(&sender, &1_000_000_000);
+
+    let (_, v2_client) = setup_v2(&env, &admin);
+    v2_client.set_fee_token(&token_id);
+
+    let recipients = soroban_sdk::vec![
+        &env,
+        crate::types::MultiAssetRecipient {
+            address: receiver1.clone(),
+            asset: token_id.clone(),
+            amount: 100_000_000,
+        },
+        crate::types::MultiAssetRecipient {
+            address: receiver2.clone(),
+            asset: token_id.clone(),
+            amount: 100_000_000,
+        },
+    ];
+
+    // Without gas buffer, split should fail.
+    let result = v2_client.try_split_multi_asset(&sender, &recipients);
+    assert_eq!(result, Err(Ok(Error::InsufficientGasBuffer)));
+
+    // Fund sender buffer and retry.
+    asset_client.mint(&sender, &100_000_000);
+    v2_client.deposit_gas_buffer(&sender, &GAS_FEE_PER_SPLIT_STROOPS).unwrap();
+
+    v2_client.split_multi_asset(&sender, &recipients).unwrap();
+
+    assert_eq!(token_client.balance(&receiver1), 100_000_000);
+    assert_eq!(token_client.balance(&receiver2), 100_000_000);
+    assert_eq!(v2_client.get_gas_buffer_balance(&sender), 0);
+}
+
+#[test]
+fn test_split_multi_asset_fails_on_non_token_asset() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let sender = Address::generate(&env);
+    let receiver = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let (token_id, _, asset_client) = create_token(&env, &token_admin);
+
+    asset_client.mint(&sender, &1_000_000_000);
+
+    let (_, v2_client) = setup_v2(&env, &admin);
+    v2_client.set_fee_token(&token_id);
+
+    let bad_asset = Address::generate(&env); // not an asset contract
+
+    let recipients = soroban_sdk::vec![
+        &env,
+        crate::types::MultiAssetRecipient { address: receiver.clone(), asset: bad_asset, amount: 100_000_000 },
+    ];
+
+    let result = v2_client.try_split_multi_asset(&sender, &recipients);
+    assert_eq!(result, Err(Ok(Error::AssetInterfaceNotSupported)));
+}
+
+#[test]
+fn test_split_multi_asset_fails_on_too_many_recipients() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let sender = Address::generate(&env);
+    let receiver = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let (token_id, _, asset_client) = create_token(&env, &token_admin);
+
+    asset_client.mint(&sender, &10_000_000_000);
+
+    let (_, v2_client) = setup_v2(&env, &admin);
+    v2_client.set_fee_token(&token_id);
+
+    let mut recipients = soroban_sdk::vec!(&env);
+    for i in 0..121 {
+        recipients.push_back(crate::types::MultiAssetRecipient {
+            address: Address::generate(&env),
+            asset: token_id.clone(),
+            amount: 1_000_000,
+        });
+    }
+
+    let result = v2_client.try_split_multi_asset(&sender, &recipients);
+    assert_eq!(result, Err(Ok(Error::BatchTooLarge)));
+}
+
+#[test]
 fn test_withdraw_treasury_transfers_pending_fees() {
     let env = Env::default();
     env.mock_all_auths();
@@ -2061,6 +2194,55 @@ fn test_split_stream_routes_bps_to_split_address() {
     // 20% of 500M = 100M to tax_vault, 80% = 400M to receiver
     assert_eq!(token_client.balance(&tax_vault), 100_000_000);
     assert_eq!(token_client.balance(&receiver), 400_000_000);
+}
+
+#[test]
+fn test_split_stream_rounding_dust_is_preserved_for_receiver() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let sender = Address::generate(&env);
+    let receiver = Address::generate(&env);
+    let tax_vault = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let (token_id, token_client, asset_client) = create_token(&env, &token_admin);
+    let (_, v2_client) = setup_v2(&env, &admin);
+    v2_client.add_to_whitelist(&token_id);
+
+    asset_client.mint(&sender, &1_000_000_000);
+
+    let sid = v2_client.create_stream(&StreamArgs {
+        sender: sender.clone(),
+        receiver: receiver.clone(),
+        token: token_id.clone(),
+        total_amount: 101,
+        start_time: 0,
+        cliff_time: 0,
+        end_time: 1,
+        step_duration: 0,
+        multiplier_bps: 0,
+        penalty_bps: 0,
+        vault_address: None,
+        yield_enabled: false,
+        is_recurrent: false,
+        cycle_duration: 0,
+        cancellation_type: 0,
+        affiliate: None,
+        yield_recipient: 0,
+        split_address: None,
+        split_bps: 0,
+    });
+
+    v2_client.split_stream(&sid, &Some(tax_vault.clone()), &3333u32);
+
+    env.ledger().set_timestamp(1);
+    v2_client.withdraw(&sid, &receiver);
+
+    // split_amount = floor(101 * 3333 / 10000) = 33
+    // receiver gets 101 - 33 = 68 (dust 6633 stroops keeps with receiver)
+    assert_eq!(token_client.balance(&tax_vault), 33);
+    assert_eq!(token_client.balance(&receiver), 68);
 }
 
 #[test]
@@ -3240,4 +3422,250 @@ fn test_propose_rate_fails_for_nonexistent_stream() {
     
     let result = v2_client.try_propose_rate(&999u64, &2_000_000);
     assert_eq!(result, Err(Ok(Error::StreamNotFound)));
+}
+
+// ----------------------------------------------------------------
+// Issue #409 — Pre-Flight Simulation Helper Tests
+// ----------------------------------------------------------------
+
+#[test]
+fn test_simulate_stream_creation_success() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let (token_id, _token_client, asset_client) = create_token(&env, &admin);
+    let (_, v2_client) = setup_v2(&env, &admin);
+
+    v2_client.add_to_whitelist(&token_id);
+
+    let sender = Address::generate(&env);
+    let receiver = Address::generate(&env);
+    let now = env.ledger().timestamp();
+
+    // Mint enough tokens to sender
+    asset_client.mint(&sender, &500_000_000);
+
+    let args = StreamArgs {
+        sender: sender.clone(),
+        receiver: receiver.clone(),
+        token: token_id.clone(),
+        total_amount: 100_000_000,
+        start_time: now,
+        cliff_time: now,
+        end_time: now + 100,
+        step_duration: 0,
+        multiplier_bps: 10000,
+        penalty_bps: 0,
+        vault_address: None,
+        yield_enabled: false,
+        is_recurrent: false,
+        cycle_duration: 0,
+        cancellation_type: 0,
+        affiliate: None,
+        yield_recipient: 0,
+        split_address: None,
+        split_bps: 0,
+    };
+
+    // Run simulation
+    let report = v2_client.simulate_stream_creation(&args);
+
+    // All checks should pass
+    assert!(report.would_succeed);
+    assert!(report.params_check.passed);
+    assert!(report.balance_check.passed);
+    assert!(report.storage_check.passed);
+    
+    // Footprint should be estimated
+    assert!(report.footprint.persistent_bytes > 0);
+}
+
+#[test]
+fn test_simulate_stream_creation_insufficient_balance() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let (token_id, _token_client, asset_client) = create_token(&env, &admin);
+    let (_, v2_client) = setup_v2(&env, &admin);
+
+    v2_client.add_to_whitelist(&token_id);
+
+    let sender = Address::generate(&env);
+    let receiver = Address::generate(&env);
+    let now = env.ledger().timestamp();
+
+    // Mint only a small amount to sender
+    asset_client.mint(&sender, &10_000_000);
+
+    let args = StreamArgs {
+        sender: sender.clone(),
+        receiver: receiver.clone(),
+        token: token_id.clone(),
+        total_amount: 100_000_000, // More than sender has
+        start_time: now,
+        cliff_time: now,
+        end_time: now + 100,
+        step_duration: 0,
+        multiplier_bps: 10000,
+        penalty_bps: 0,
+        vault_address: None,
+        yield_enabled: false,
+        is_recurrent: false,
+        cycle_duration: 0,
+        cancellation_type: 0,
+        affiliate: None,
+        yield_recipient: 0,
+        split_address: None,
+        split_bps: 0,
+    };
+
+    // Run simulation
+    let report = v2_client.simulate_stream_creation(&args);
+
+    // Should fail due to insufficient balance
+    assert!(!report.would_succeed);
+    assert!(!report.balance_check.passed);
+    assert_eq!(report.balance_check.error_code, 64); // SimulationInsufficientBalance
+}
+
+#[test]
+fn test_simulate_stream_creation_invalid_time_range() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let (token_id, _token_client, _asset_client) = create_token(&env, &admin);
+    let (_, v2_client) = setup_v2(&env, &admin);
+
+    v2_client.add_to_whitelist(&token_id);
+
+    let sender = Address::generate(&env);
+    let receiver = Address::generate(&env);
+    let now = env.ledger().timestamp();
+
+    let args = StreamArgs {
+        sender: sender.clone(),
+        receiver: receiver.clone(),
+        token: token_id.clone(),
+        total_amount: 100_000_000,
+        start_time: now + 100, // Start after end
+        cliff_time: now,
+        end_time: now,
+        step_duration: 0,
+        multiplier_bps: 10000,
+        penalty_bps: 0,
+        vault_address: None,
+        yield_enabled: false,
+        is_recurrent: false,
+        cycle_duration: 0,
+        cancellation_type: 0,
+        affiliate: None,
+        yield_recipient: 0,
+        split_address: None,
+        split_bps: 0,
+    };
+
+    // Run simulation
+    let report = v2_client.simulate_stream_creation(&args);
+
+    // Should fail due to invalid time range
+    assert!(!report.would_succeed);
+    assert!(!report.params_check.passed);
+    assert_eq!(report.params_check.error_code, 14); // InvalidTimeRange
+}
+
+#[test]
+fn test_can_create_stream_quick_check() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let (token_id, _token_client, asset_client) = create_token(&env, &admin);
+    let (_, v2_client) = setup_v2(&env, &admin);
+
+    v2_client.add_to_whitelist(&token_id);
+
+    let sender = Address::generate(&env);
+    let receiver = Address::generate(&env);
+    let now = env.ledger().timestamp();
+
+    // Mint enough tokens
+    asset_client.mint(&sender, &500_000_000);
+
+    let args = StreamArgs {
+        sender: sender.clone(),
+        receiver: receiver.clone(),
+        token: token_id.clone(),
+        total_amount: 100_000_000,
+        start_time: now,
+        cliff_time: now,
+        end_time: now + 100,
+        step_duration: 0,
+        multiplier_bps: 10000,
+        penalty_bps: 0,
+        vault_address: None,
+        yield_enabled: false,
+        is_recurrent: false,
+        cycle_duration: 0,
+        cancellation_type: 0,
+        affiliate: None,
+        yield_recipient: 0,
+        split_address: None,
+        split_bps: 0,
+    };
+
+    // Quick check
+    let can_create = v2_client.can_create_stream(&args);
+    assert!(can_create);
+}
+
+#[test]
+fn test_simulate_ledger_footprint_estimated() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let (token_id, _token_client, asset_client) = create_token(&env, &admin);
+    let (_, v2_client) = setup_v2(&env, &admin);
+
+    v2_client.add_to_whitelist(&token_id);
+
+    let sender = Address::generate(&env);
+    let receiver = Address::generate(&env);
+    let now = env.ledger().timestamp();
+
+    asset_client.mint(&sender, &500_000_000);
+
+    let args = StreamArgs {
+        sender: sender.clone(),
+        receiver: receiver.clone(),
+        token: token_id.clone(),
+        total_amount: 100_000_000,
+        start_time: now,
+        cliff_time: now,
+        end_time: now + 100,
+        step_duration: 0,
+        multiplier_bps: 10000,
+        penalty_bps: 0,
+        vault_address: None,
+        yield_enabled: false,
+        is_recurrent: false,
+        cycle_duration: 0,
+        cancellation_type: 0,
+        affiliate: None,
+        yield_recipient: 0,
+        split_address: None,
+        split_bps: 0,
+    };
+
+    let report = v2_client.simulate_stream_creation(&args);
+
+    // Verify footprint estimates are reasonable
+    assert!(report.footprint.instance_bytes > 0);
+    assert!(report.footprint.persistent_bytes > 0);
+    assert!(report.footprint.estimated_reads > 0);
+    assert!(report.footprint.estimated_writes > 0);
+    assert!(report.footprint.event_bytes > 0);
 }

@@ -14,7 +14,8 @@ pub enum Error {
     BelowDustThreshold = 10,
     ContractPaused = 11,
     InsufficientBalance = 12,
-    StreamNotFound = 13,
+    InsufficientGasBuffer = 13,
+    StreamNotFound = 14,
     InvalidTimeRange = 14,
     AlreadyCancelled = 15,
     BatchTooLarge = 16,
@@ -35,6 +36,8 @@ pub enum Error {
     NoTreasury = 28,
     /// Token is not approved for V2 stream creation
     AssetNotWhitelisted = 29,
+    /// Asset contract does not implement required token interface (balance/transfer)
+    AssetInterfaceNotSupported = 67,
     /// penalty_bps exceeds 10000 (100%)
     InvalidPenalty = 30,
     /// migrate_stream is blocked; standard V2 streams remain active.
@@ -104,4 +107,11 @@ pub enum Error {
     NotReceiver = 62,
     /// Stream is not active (already completed or cancelled)
     StreamNotActive = 63,
+    // Issue #409 — Pre-Flight Simulation Helper
+    /// Simulation: Sender has insufficient balance for the stream
+    SimulationInsufficientBalance = 64,
+    /// Simulation: Stream creation would exceed storage limits
+    SimulationStorageLimitExceeded = 65,
+    /// Simulation: Invalid parameters for stream creation
+    SimulationInvalidParams = 66,
 }
