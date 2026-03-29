@@ -317,7 +317,7 @@ fn test_execute_split_before_release_time_rejected() {
         .unwrap();
 
     let result = s.contract.execute_split(&split_id);
-    assert_eq!(result, Err(Error::SplitNotYetDue));
+    assert_eq!(result, Err(Error::NotYetReleased));
 }
 
 #[test]

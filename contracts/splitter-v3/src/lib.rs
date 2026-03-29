@@ -416,7 +416,7 @@ impl SplitterV3 {
         }
 
         if env.ledger().timestamp() < config.release_time {
-            return Err(Error::SplitNotYetDue);
+            return Err(Error::NotYetReleased);
         }
 
         let token_addr: Address = env.storage().instance().get(&DataKey::Token).unwrap();
