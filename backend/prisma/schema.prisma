@@ -460,3 +460,35 @@ model AssetMapping {
   @@index([symbol])
   @@index([sourceChain])
 }
+
+// Time-series price history for tax and reporting purposes
+model PriceHistory {
+  id           String   @id @default(cuid())
+  asset        String   // Asset identifier e.g. "native" or "USDC:ISSUER"
+  symbol       String   // Human-readable symbol e.g. "XLM", "USDC"
+  priceUsd     Float    // USD price at the time of recording
+  source       String   // "coingecko" | "dex"
+  recordedAt   DateTime @default(now())
+
+  @@index([asset, recordedAt])
+  @@index([recordedAt])
+}
+
+// Log of payment splits with linked USD price at time of split
+model SplitLog {
+  id             String        @id @default(cuid())
+  streamId       String
+  asset          String
+  amount         String
+  sender         String
+  receiver       String
+  txHash         String        @unique
+  priceUsd       Float?        // USD price at time of split
+  priceSource    String?       // Where the price came from
+  priceRecordedAt DateTime?    // When the price was recorded
+  executedAt     DateTime      @default(now())
+
+  @@index([streamId])
+  @@index([executedAt])
+  @@index([txHash])
+}
