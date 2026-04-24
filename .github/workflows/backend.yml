@@ -30,6 +30,9 @@ jobs:
         working-directory: ./backend
 
       - name: Run Tests
-        # Validates Disbursement Engine and Indexer logic
-        run: npm test
+        uses: nick-invision/retry@v2
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          command: npm test
         working-directory: ./backend

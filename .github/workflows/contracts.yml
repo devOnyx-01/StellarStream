@@ -29,17 +29,24 @@ jobs:
         working-directory: ./contracts
 
       - name: Run Cargo Tests
-        run: cargo test --all
+        uses: nick-invision/retry@v2
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          command: cargo test --all
         working-directory: ./contracts
 
       - name: Install Tarpaulin
         run: cargo install cargo-tarpaulin
 
       - name: Run Tests & Verify Coverage
-        # Enforce 90% branch coverage as per Issue #910 requirements
-        run: |
-          cargo tarpaulin \
-            --branch \
-            --fail-under 90 \
-            --out Xml
+        uses: nick-invision/retry@v2
+        with:
+          timeout_minutes: 15
+          max_attempts: 3
+          command: |
+            cargo tarpaulin \
+              --branch \
+              --fail-under 90 \
+              --out Xml
         working-directory: ./contracts

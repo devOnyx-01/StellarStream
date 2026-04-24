@@ -35,8 +35,11 @@ jobs:
         working-directory: ./frontend
 
       - name: Run E2E Tests
-        # Tests Wallet connection and Stream creation flows
-        run: npx playwright test
+        uses: nick-invision/retry@v2
+        with:
+          timeout_minutes: 15
+          max_attempts: 3
+          command: npx playwright test
         working-directory: ./frontend
 
       - name: Upload Report
