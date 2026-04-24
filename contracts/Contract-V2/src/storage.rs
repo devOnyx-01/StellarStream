@@ -159,6 +159,9 @@ pub enum DataKeyV2 {
     RecoveryInitiatedAt, // 33
     /// Addresses that have already approved the current recovery
     RecoveryApprovals, // 34
+
+    // -- Issue #938 — Variable-Fee Tiered Logic -----------------------
+    FeeTiers, // 35
 }
 
 /// Global stream counter.
@@ -634,6 +637,17 @@ pub fn get_fee_bps(env: &Env) -> u32 {
         .instance()
         .get(&DataKeyV2::FeeBps)
         .unwrap_or(0)
+}
+
+/// Set the tiered fee configuration.
+pub fn set_fee_tiers(env: &Env, tiers: Vec<crate::FeeTier>) {
+    env.storage().instance().set(&DataKeyV2::FeeTiers, &tiers);
+    bump_instance(env);
+}
+
+/// Return the tiered fee configuration, if set.
+pub fn get_fee_tiers(env: &Env) -> Option<Vec<crate::FeeTier>> {
+    env.storage().instance().get(&DataKeyV2::FeeTiers)
 }
 
 /// Add `amount` to the pending fee balance for `(recipient, token)`.

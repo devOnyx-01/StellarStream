@@ -2400,3 +2400,244 @@ fn test_sanctions_oracle_no_oracle_set_allows_transfer() {
     assert!(withdrawn > 0);
     assert!(token_client.balance(&receiver) > 0);
 }
+
+// ── Issue #938 — Variable-Fee Tiered Logic tests ────────────────────────────
+
+#[test]
+fn test_set_get_fee_tiers_success() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let (_, client) = setup_v2(&env, &admin);
+
+    let tiers = vec![
+        &env,
+        FeeTier {
+            threshold: 100_000_000, // 100M stroops
+            fee_bps: 100,           // 1%
+        },
+        FeeTier {
+            threshold: 1_000_000_000, // 1B stroops
+            fee_bps: 50,            // 0.5%
+        },
+    ];
+
+    client.set_fee_tiers(&tiers);
+
+    let fetched_tiers = client.get_fee_tiers();
+    assert_eq!(fetched_tiers.len(), 2);
+    assert_eq!(fetched_tiers.get(0).unwrap(), tiers.get(0).unwrap());
+    assert_eq!(fetched_tiers.get(1).unwrap(), tiers.get(1).unwrap());
+}
+
+#[test]
+fn test_set_fee_tiers_admin_only() {
+    let env = Env::default();
+    let admin = Address::generate(&env);
+    let non_admin = Address::generate(&env);
+    let (_, client) = setup_v2(&env, &admin);
+
+    let tiers = vec![
+        &env,
+        FeeTier {
+            threshold: 100_000_000,
+            fee_bps: 100,
+        },
+    ];
+
+    // Attempt to set tiers without admin auth (should fail)
+    let result = client.try_set_fee_tiers(&tiers);
+    assert!(result.is_err());
+
+    // Mock non_admin auth, still fails
+    env.mock_auths(&[non_admin.into()]);
+    let result = client.try_set_fee_tiers(&tiers);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_set_fee_tiers_fee_too_high() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let (_, client) = setup_v2(&env, &admin);
+
+    // Attempt to set a tier with fee_bps > MAX_FEE_BPS (500)
+    let tiers = vec![
+        &env,
+        FeeTier {
+            threshold: 100_000_000,
+            fee_bps: MAX_FEE_BPS + 1, // 501 BPS
+        },
+    ];
+
+    let result = client.try_set_fee_tiers(&tiers);
+    assert_eq!(result, Err(Ok(Error::FeeTooHigh)));
+}
+
+#[test]
+fn test_get_fee_tiers_empty() {
+    let env = Env::default();
+    let admin = Address::generate(&env);
+    let (_, client) = setup_v2(&env, &admin);
+
+    let fetched_tiers = client.get_fee_tiers();
+    assert!(fetched_tiers.is_empty());
+}
+
+#[test]
+fn test_create_stream_with_tiered_fee_no_discount() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let sender = Address::generate(&env);
+    let receiver = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let (token_id, token_client, asset_client) = create_token(&env, &token_admin);
+
+    asset_client.mint(&sender, &1_000_000_000);
+
+    let (contract_id, v2_client) = setup_v2(&env, &admin);
+    v2_client.set_treasury(&treasury);
+    v2_client.add_to_whitelist(&token_id);
+    v2_client.set_fee_bps(&200u32); // Default fee 2%
+
+    let tiers = vec![
+        &env,
+        FeeTier {
+            threshold: 500_000_000, // 500M stroops
+            fee_bps: 100,           // 1%
+        },
+    ];
+    v2_client.set_fee_tiers(&tiers);
+
+    // Amount below threshold (100M < 500M), should apply default 2% fee
+    let total_amount = 100_000_000;
+    let expected_fee = (total_amount * 200) / 10_000; // 2% of 100M = 2M
+    let expected_stream_amount = total_amount - expected_fee;
+
+    let sid = v2_client.create_stream(&stream_args(&sender, &receiver, &token_id, total_amount));
+    let stream = v2_client.get_stream(&sid).unwrap();
+
+    assert_eq!(stream.total_amount, expected_stream_amount);
+    assert_eq!(v2_client.get_pending_fees(&treasury, &token_id), expected_fee);
+}
+
+#[test]
+fn test_create_stream_with_tiered_fee_discount_applied() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let sender = Address::generate(&env);
+    let receiver = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let (token_id, token_client, asset_client) = create_token(&env, &token_admin);
+
+    asset_client.mint(&sender, &2_000_000_000);
+
+    let (contract_id, v2_client) = setup_v2(&env, &admin);
+    v2_client.set_treasury(&treasury);
+    v2_client.add_to_whitelist(&token_id);
+    v2_client.set_fee_bps(&200u32); // Default fee 2%
+
+    let tiers = vec![
+        &env,
+        FeeTier {
+            threshold: 500_000_000, // 500M stroops
+            fee_bps: 100,           // 1%
+        },
+        FeeTier {
+            threshold: 1_000_000_000, // 1B stroops
+            fee_bps: 50,            // 0.5%
+        },
+    ];
+    v2_client.set_fee_tiers(&tiers);
+
+    // Amount above second threshold (1.5B > 1B), should apply 0.5% fee
+    let total_amount = 1_500_000_000;
+    let expected_fee = (total_amount * 50) / 10_000; // 0.5% of 1.5B = 7.5M
+    let expected_stream_amount = total_amount - expected_fee;
+
+    let sid = v2_client.create_stream(&stream_args(&sender, &receiver, &token_id, total_amount));
+    let stream = v2_client.get_stream(&sid).unwrap();
+
+    assert_eq!(stream.total_amount, expected_stream_amount);
+    assert_eq!(v2_client.get_pending_fees(&treasury, &token_id), expected_fee);
+}
+
+#[test]
+fn test_create_stream_with_tiered_fee_exact_threshold() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let sender = Address::generate(&env);
+    let receiver = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let (token_id, token_client, asset_client) = create_token(&env, &token_admin);
+
+    asset_client.mint(&sender, &1_000_000_000);
+
+    let (contract_id, v2_client) = setup_v2(&env, &admin);
+    v2_client.set_treasury(&treasury);
+    v2_client.add_to_whitelist(&token_id);
+    v2_client.set_fee_bps(&200u32); // Default fee 2%
+
+    let tiers = vec![
+        &env,
+        FeeTier {
+            threshold: 500_000_000, // 500M stroops
+            fee_bps: 100,           // 1%
+        },
+    ];
+    v2_client.set_fee_tiers(&tiers);
+
+    // Amount exactly at threshold (500M), should apply 1% fee
+    let total_amount = 500_000_000;
+    let expected_fee = (total_amount * 100) / 10_000; // 1% of 500M = 5M
+    let expected_stream_amount = total_amount - expected_fee;
+
+    let sid = v2_client.create_stream(&stream_args(&sender, &receiver, &token_id, total_amount));
+    let stream = v2_client.get_stream(&sid).unwrap();
+
+    assert_eq!(stream.total_amount, expected_stream_amount);
+    assert_eq!(v2_client.get_pending_fees(&treasury, &token_id), expected_fee);
+}
+
+#[test]
+fn test_create_stream_with_tiered_fee_no_tiers_set() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let sender = Address::generate(&env);
+    let receiver = Address::generate(&env);
+    let treasury = Address::generate(&env);
+    let token_admin = Address::generate(&env);
+    let (token_id, token_client, asset_client) = create_token(&env, &token_admin);
+
+    asset_client.mint(&sender, &1_000_000_000);
+
+    let (contract_id, v2_client) = setup_v2(&env, &admin);
+    v2_client.set_treasury(&treasury);
+    v2_client.add_to_whitelist(&token_id);
+    v2_client.set_fee_bps(&200u32); // Default fee 2%
+
+    // No tiers set, should apply default 2% fee regardless of amount
+    let total_amount = 1_500_000_000;
+    let expected_fee = (total_amount * 200) / 10_000; // 2% of 1.5B = 30M
+    let expected_stream_amount = total_amount - expected_fee;
+
+    let sid = v2_client.create_stream(&stream_args(&sender, &receiver, &token_id, total_amount));
+    let stream = v2_client.get_stream(&sid).unwrap();
+
+    assert_eq!(stream.total_amount, expected_stream_amount);
+    assert_eq!(v2_client.get_pending_fees(&treasury, &token_id), expected_fee);
+}
