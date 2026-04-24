@@ -71,20 +71,24 @@ export class HistoricalDataBackfillService {
 
       for (const event of events) {
         try {
-          // Upsert event into database
-          await prisma.streamEvent.upsert({
-            where: { eventId: event.eventId },
+          // Upsert event into database using ContractEvent model
+          await prisma.contractEvent.upsert({
+            where: { event_id: event.eventId },
             create: {
               eventId: event.eventId,
               contractId,
-              ledger: event.ledger,
-              type: event.type,
-              data: event.data,
-              timestamp: new Date(event.timestamp),
+              txHash: event.txHash || 'unknown',
+              eventType: event.type,
+              eventIndex: 0,
+              ledgerSequence: event.ledger,
+              ledgerClosedAt: event.timestamp,
+              topicXdr: [],
+              valueXdr: JSON.stringify(event.data),
+              decodedJson: event.data,
             },
             update: {
-              data: event.data,
-              timestamp: new Date(event.timestamp),
+              decodedJson: event.data,
+              ledgerClosedAt: event.timestamp,
             },
           });
           processed++;
@@ -170,6 +174,7 @@ export class HistoricalDataBackfillService {
       type: string;
       data: any;
       timestamp: string;
+      txHash: string;
     }>
   > {
     const events = [];
@@ -198,6 +203,7 @@ export class HistoricalDataBackfillService {
                 type: record.type,
                 data: record,
                 timestamp: record.created_at,
+                txHash: record.transaction_hash || 'unknown',
               });
             }
           }

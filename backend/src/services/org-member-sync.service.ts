@@ -1,4 +1,7 @@
 import { prisma } from '../lib/db.js';
+import { redis } from '../lib/redis.js';
+
+const TAGS_PREFIX = 'org-member-tags:';
 
 export interface OrgMemberTag {
   id: string;
@@ -16,14 +19,14 @@ export interface OrgMemberWithTags {
 
 export class OrgMemberSyncService {
   /**
-   * Sync organization members with tagging support.
+   * Sync organization members.
    * Allows bulk operations for team organization.
    */
   async syncMembers(
     orgAddress: string,
     members: Array<{
       memberAddress: string;
-      role: string;
+      role: 'DRAFTER' | 'APPROVER' | 'EXECUTOR';
       tags?: string[];
     }>,
   ): Promise<void> {
@@ -39,53 +42,38 @@ export class OrgMemberSyncService {
           orgAddress,
           memberAddress: member.memberAddress,
           role: member.role,
+          addedBy: 'system',
           isActive: true,
-          tags: member.tags || [],
         },
         update: {
           role: member.role,
-          tags: member.tags || [],
           isActive: true,
         },
       });
+
+      // Store tags in Redis
+      if (member.tags && member.tags.length > 0) {
+        await this.addTagsToMember(orgAddress, member.memberAddress, member.tags);
+      }
     }
   }
 
   /**
-   * Add tags to a member.
+   * Add tags to a member (stored in Redis).
    */
   async addTagsToMember(
     orgAddress: string,
     memberAddress: string,
     tags: string[],
   ): Promise<void> {
-    const member = await prisma.organizationMember.findUnique({
-      where: {
-        orgAddress_memberAddress: {
-          orgAddress,
-          memberAddress,
-        },
-      },
-    });
+    const key = `${TAGS_PREFIX}${orgAddress}:${memberAddress}`;
+    const existing = await redis.smembers(key);
+    const allTags = Array.from(new Set([...existing, ...tags]));
 
-    if (!member) {
-      throw new Error('Member not found');
+    await redis.del(key);
+    if (allTags.length > 0) {
+      await redis.sadd(key, ...allTags);
     }
-
-    const existingTags = (member.tags as string[]) || [];
-    const newTags = Array.from(new Set([...existingTags, ...tags]));
-
-    await prisma.organizationMember.update({
-      where: {
-        orgAddress_memberAddress: {
-          orgAddress,
-          memberAddress,
-        },
-      },
-      data: {
-        tags: newTags,
-      },
-    });
   }
 
   /**
@@ -96,33 +84,10 @@ export class OrgMemberSyncService {
     memberAddress: string,
     tags: string[],
   ): Promise<void> {
-    const member = await prisma.organizationMember.findUnique({
-      where: {
-        orgAddress_memberAddress: {
-          orgAddress,
-          memberAddress,
-        },
-      },
-    });
-
-    if (!member) {
-      throw new Error('Member not found');
+    const key = `${TAGS_PREFIX}${orgAddress}:${memberAddress}`;
+    for (const tag of tags) {
+      await redis.srem(key, tag);
     }
-
-    const existingTags = (member.tags as string[]) || [];
-    const updatedTags = existingTags.filter((tag) => !tags.includes(tag));
-
-    await prisma.organizationMember.update({
-      where: {
-        orgAddress_memberAddress: {
-          orgAddress,
-          memberAddress,
-        },
-      },
-      data: {
-        tags: updatedTags,
-      },
-    });
   }
 
   /**
@@ -134,20 +99,25 @@ export class OrgMemberSyncService {
         orgAddress,
         isActive: true,
       },
+      orderBy: { createdAt: 'asc' },
     });
 
-    return members
-      .filter((m) => {
-        const tags = (m.tags as string[]) || [];
-        return tags.includes(tag);
-      })
-      .map((m) => ({
-        memberAddress: m.memberAddress,
-        role: m.role,
-        tags: ((m.tags as string[]) || []).map((t) => ({ id: t, name: t })),
-        addedBy: m.addedBy,
-        createdAt: m.createdAt,
-      }));
+    const result: OrgMemberWithTags[] = [];
+
+    for (const member of members) {
+      const tags = await redis.smembers(`${TAGS_PREFIX}${orgAddress}:${member.memberAddress}`);
+      if (tags.includes(tag)) {
+        result.push({
+          memberAddress: member.memberAddress,
+          role: member.role,
+          tags: tags.map((t) => ({ id: t, name: t })),
+          addedBy: member.addedBy,
+          createdAt: member.createdAt,
+        });
+      }
+    }
+
+    return result;
   }
 
   /**
@@ -162,13 +132,20 @@ export class OrgMemberSyncService {
       orderBy: { createdAt: 'asc' },
     });
 
-    return members.map((m) => ({
-      memberAddress: m.memberAddress,
-      role: m.role,
-      tags: ((m.tags as string[]) || []).map((t) => ({ id: t, name: t })),
-      addedBy: m.addedBy,
-      createdAt: m.createdAt,
-    }));
+    const result: OrgMemberWithTags[] = [];
+
+    for (const member of members) {
+      const tags = await redis.smembers(`${TAGS_PREFIX}${orgAddress}:${member.memberAddress}`);
+      result.push({
+        memberAddress: member.memberAddress,
+        role: member.role,
+        tags: tags.map((t) => ({ id: t, name: t })),
+        addedBy: member.addedBy,
+        createdAt: member.createdAt,
+      });
+    }
+
+    return result;
   }
 
   /**
@@ -180,14 +157,14 @@ export class OrgMemberSyncService {
         orgAddress,
         isActive: true,
       },
-      select: { tags: true },
     });
 
     const allTags = new Set<string>();
-    members.forEach((m) => {
-      const tags = (m.tags as string[]) || [];
+
+    for (const member of members) {
+      const tags = await redis.smembers(`${TAGS_PREFIX}${orgAddress}:${member.memberAddress}`);
       tags.forEach((t) => allTags.add(t));
-    });
+    }
 
     return Array.from(allTags).sort();
   }

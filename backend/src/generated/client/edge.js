@@ -580,7 +580,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/home/StellarStream/backend/src/generated/client",
+      "value": "/workspaces/StellarStream/backend/src/generated/client",
       "fromEnvVar": null
     },
     "config": {
@@ -594,7 +594,7 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/home/StellarStream/backend/prisma/schema.prisma",
+    "sourceFilePath": "/workspaces/StellarStream/backend/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
@@ -607,7 +607,7 @@ const config = {
     "db"
   ],
   "activeProvider": "postgresql",
-  "postinstall": false,
+  "postinstall": true,
   "inlineDatasources": {
     "db": {
       "url": {
