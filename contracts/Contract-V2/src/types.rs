@@ -1,5 +1,7 @@
 use soroban_sdk::{contracttype, Address, BytesN, Symbol, Val, Vec};
 
+pub const MAX_MEMO_LENGTH: u32 = 32;
+
 #[contracttype]
 #[derive(Clone, Debug, PartialEq)]
 pub struct StreamV2 {
@@ -63,6 +65,8 @@ pub struct StreamArgs {
     pub cancellation_type: u32,
     /// Reserved for future routing extensions; protocol fees currently go to treasury only.
     pub affiliate: Option<Address>,
+    /// Optional memo for external integrations (max 32 characters)
+    pub memo: Option<Symbol>,
     /// Who receives accrued vault yield: 0 = Sender, 1 = Receiver, 2 = Treasury (Issue #410)
     pub yield_recipient: u32,
     /// Address that receives a split of every withdrawal (Issue #411)
@@ -456,6 +460,16 @@ pub struct FeesWithdrawnEvent {
     pub timestamp: u64,
 }
 
+#[contracttype]
+#[derive(Clone, Debug)]
+pub struct SplitExecutedEvent {
+    pub stream_id: u64,
+    pub sender: Address,
+    pub receiver: Address,
+    pub amount: i128,
+    pub memo: Option<Symbol>,
+    pub timestamp: u64,
+}
 // ----------------------------------------------------------------
 // Issue #408 — Multi-sig Transaction Buffer (Stream Request Approval)
 // ----------------------------------------------------------------

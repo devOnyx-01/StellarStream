@@ -17,6 +17,11 @@ import webhooksRouter from "./webhooks.routes.js";
 import feeBumpRouter from "./fee-bump.routes.js";
 import draftVersionsRouter from "./draft-versions.routes.js";
 import validateSplitRouter from "./validate-split.routes.js";
+import proofOfPaymentRouter from "./proof-of-payment.routes.js";
+import orgGasStatusRouter from "./org-gas-status.routes.js";
+import notificationChannelsRouter from "./notification-channels.routes.js";
+import assetMapperRouter from "./asset-mapper.routes.js";
+import templateRouter from "./template.routes.js";
 
 const router = Router();
 
@@ -46,5 +51,10 @@ router.use(webhooksRouter);
 router.use(feeBumpRouter);
 router.use(draftVersionsRouter);
 router.use(validateSplitRouter);
+router.use(proofOfPaymentRouter);
+router.use(orgGasStatusRouter);
+router.use(notificationChannelsRouter);
+router.use("/assets", assetMapperRouter);
+router.use(templateRouter);
 
 export default router;

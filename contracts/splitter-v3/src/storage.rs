@@ -16,6 +16,12 @@ pub enum DataKey {
     ScheduledSplit(u64),
     ClaimableBalance(Address, Address),
     CouncilKeys,
+    ContractState,
+    AffiliateAddress,
+    AffiliateBps,
+    PendingWithdrawal(Address),
+    ProcessedHash(BytesN<32>),
+    SplitFundsNextIndex,
     // #924: migration version to prevent re-running migration logic
     MigrationVersion,
     // #927: whitelist map and flag

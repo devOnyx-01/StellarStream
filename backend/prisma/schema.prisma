@@ -334,6 +334,7 @@ model Affiliate {
 
   @@index([stellarAddress])
 }
+
 // Global protocol statistics for landing page
 model GlobalStats {
   id              String   @id @default("global")
@@ -376,11 +377,17 @@ model Asset {
   imageUrl        String?
   decimals        Int      @default(7)
   isVerified      Boolean  @default(false)
+  stellarExpertVerified Boolean @default(false) @map("stellar_expert_verified")
+  tomlUrl         String?
+  orgVerified     Boolean  @default(false) @map("org_verified")
+  orgHomeDomain   String?  @map("org_home_domain")
   lastFetchedAt   DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   @@index([tokenAddress])
+  @@index([stellarExpertVerified])
+  @@index([orgVerified])
 }
 
 // Autopilot periodic split schedules
@@ -421,6 +428,55 @@ model AssetConfig {
   @@index([isVisible])
 }
 
+// Cold storage for disbursements older than 18 months
+model ArchivedDisbursement {
+  id             String   @id @default(cuid())
+  streamId       String
+  txHash         String
+  sender         String
+  receiver       String
+  amount         BigInt
+  tokenAddress   String
+  status         String
+  completedAt    DateTime
+  archivedAt     DateTime @default(now())
+  originalLedger Int
+
+  @@index([streamId])
+  @@index([completedAt])
+  @@index([archivedAt])
+  @@index([sender])
+  @@index([receiver])
+}
+
+// Active disbursements table (keeps primary table lean)
+model Disbursement {
+  id             String       @id @default(cuid())
+  streamId       String
+  txHash         String       @unique
+  sender         String
+  receiver       String
+  amount         BigInt
+  tokenAddress   String
+  status         DisbursementStatus @default(PENDING)
+  createdAt      DateTime     @default(now())
+  completedAt    DateTime?
+  ledger         Int
+
+  @@index([streamId])
+  @@index([sender])
+  @@index([receiver])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum DisbursementStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
 // ── V3 Fund-Split Tables ──────────────────────────────────────────────────────
 
 // Header record for a single fund-split disbursement

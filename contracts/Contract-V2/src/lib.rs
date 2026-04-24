@@ -12,6 +12,11 @@ mod v1_interface;
 use contracterror::Error;
 pub use types::{
     AdminTransferredEvent, BatchStreamsCreatedEvent, BeneficiaryTransferredV2Event,
+    ClawbackRebalanceEvent, ContractPausedEvent, ContractUnpausedEvent, FeesWithdrawnEvent,
+    MigrationEvent, NebulaEvent, Operation, OperationExecutedEvent, OperationScheduledEvent,
+    PermitArgs, PermitStreamCreatedEvent, SplitExecutedEvent, StreamArgs, StreamBatchEntry,
+    StreamCancelledV2Event, StreamClaimV2Event, StreamCreatedV2Event, StreamMigratedEvent,
+    StreamRefilledEvent, StreamStatus, StreamToppedUpEvent, StreamV2, MAX_MEMO_LENGTH,
     ClawbackRebalanceEvent, ContractPausedEvent, ContractUnpausedEvent, DexPoolInfo,
     FeesWithdrawnEvent, LedgerFootprint, MigrationEvent, MultiAssetRecipient, Recipient, NebulaEvent,
     Operation, OperationExecutedEvent, OperationScheduledEvent, PendingRateUpdate, PermitArgs,
@@ -2300,6 +2305,12 @@ impl Contract {
             return Err(Error::BelowDustThreshold);
         }
 
+        if let Some(ref memo) = args.memo {
+            let memo_str = memo.to_string();
+            if memo_str.len() > MAX_MEMO_LENGTH as usize {
+                return Err(Error::InvalidMemo);
+            }
+        }
         // Compliance oracle check (Issue #412)
         Self::require_compliant(&env, &args.sender)?;
         Self::require_compliant(&env, &args.receiver)?;
@@ -2366,6 +2377,7 @@ impl Contract {
         data.push_back(args.cliff_time.into_val(&env));
         data.push_back(args.end_time.into_val(&env));
         data.push_back(now.into_val(&env));
+        data.push_back(args.memo.clone().into_val(&env));
 
         env.events().publish(
             (stream_id, symbol_short!("create_v2")),
@@ -2376,6 +2388,26 @@ impl Contract {
                 data,
             },
         );
+
+        if args.memo.is_some() {
+            let mut split_data = Vec::new(&env);
+            split_data.push_back(stream_id.into_val(&env));
+            split_data.push_back(args.sender.clone().into_val(&env));
+            split_data.push_back(args.receiver.clone().into_val(&env));
+            split_data.push_back(stream_amount.into_val(&env));
+            split_data.push_back(args.memo.clone().into_val(&env));
+            split_data.push_back(now.into_val(&env));
+
+            env.events().publish(
+                (stream_id, symbol_short!("split_exec")),
+                NebulaEvent {
+                    version: 2,
+                    timestamp: now,
+                    action: symbol_short!("split_exec"),
+                    data: split_data,
+                },
+            );
+        }
 
         Ok(stream_id)
     }
