@@ -476,6 +476,24 @@ exports.Prisma.SplitLogScalarFieldEnum = {
   executedAt: 'executedAt'
 };
 
+exports.Prisma.MonitoredTransactionScalarFieldEnum = {
+  id: 'id',
+  txHash: 'txHash',
+  txXdr: 'txXdr',
+  sourceAddress: 'sourceAddress',
+  originalFeeSt: 'originalFeeSt',
+  currentFeeSt: 'currentFeeSt',
+  bumpCount: 'bumpCount',
+  maxBumps: 'maxBumps',
+  status: 'status',
+  submittedAt: 'submittedAt',
+  confirmedAt: 'confirmedAt',
+  lastBumpAt: 'lastBumpAt',
+  errorMessage: 'errorMessage',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.DisbursementDraftScalarFieldEnum = {
   id: 'id',
   senderAddress: 'senderAddress',
@@ -577,6 +595,7 @@ exports.Prisma.ModelName = {
   PriceHistory: 'PriceHistory',
   ProtocolInefficiencyReport: 'ProtocolInefficiencyReport',
   SplitLog: 'SplitLog',
+  MonitoredTransaction: 'MonitoredTransaction',
   DisbursementDraft: 'DisbursementDraft',
   DisbursementDraftVersion: 'DisbursementDraftVersion'
 };

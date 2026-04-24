@@ -159,6 +159,11 @@ export type ProtocolInefficiencyReport = $Result.DefaultSelection<Prisma.$Protoc
  */
 export type SplitLog = $Result.DefaultSelection<Prisma.$SplitLogPayload>
 /**
+ * Model MonitoredTransaction
+ * 
+ */
+export type MonitoredTransaction = $Result.DefaultSelection<Prisma.$MonitoredTransactionPayload>
+/**
  * Model DisbursementDraft
  * 
  */
@@ -639,6 +644,16 @@ export class PrismaClient<
     * ```
     */
   get splitLog(): Prisma.SplitLogDelegate<ExtArgs>;
+
+  /**
+   * `prisma.monitoredTransaction`: Exposes CRUD operations for the **MonitoredTransaction** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more MonitoredTransactions
+    * const monitoredTransactions = await prisma.monitoredTransaction.findMany()
+    * ```
+    */
+  get monitoredTransaction(): Prisma.MonitoredTransactionDelegate<ExtArgs>;
 
   /**
    * `prisma.disbursementDraft`: Exposes CRUD operations for the **DisbursementDraft** model.
@@ -1129,6 +1144,7 @@ export namespace Prisma {
     PriceHistory: 'PriceHistory',
     ProtocolInefficiencyReport: 'ProtocolInefficiencyReport',
     SplitLog: 'SplitLog',
+    MonitoredTransaction: 'MonitoredTransaction',
     DisbursementDraft: 'DisbursementDraft',
     DisbursementDraftVersion: 'DisbursementDraftVersion'
   };
@@ -1146,7 +1162,7 @@ export namespace Prisma {
 
   export type TypeMap<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, ClientOptions = {}> = {
     meta: {
-      modelProps: "stream" | "contractEvent" | "tokenPrice" | "webhook" | "webhookDelivery" | "syncState" | "eventLog" | "streamSnapshot" | "streamArchive" | "bridgeLog" | "proposal" | "organizationMember" | "apiKey" | "ledgerHash" | "notificationSubscription" | "invoiceLink" | "affiliate" | "globalStats" | "globalStats_V3" | "tvlSnapshot" | "asset" | "autopilotSchedule" | "assetConfig" | "disbursement" | "splitRecipient" | "assetMapping" | "priceHistory" | "protocolInefficiencyReport" | "splitLog" | "disbursementDraft" | "disbursementDraftVersion"
+      modelProps: "stream" | "contractEvent" | "tokenPrice" | "webhook" | "webhookDelivery" | "syncState" | "eventLog" | "streamSnapshot" | "streamArchive" | "bridgeLog" | "proposal" | "organizationMember" | "apiKey" | "ledgerHash" | "notificationSubscription" | "invoiceLink" | "affiliate" | "globalStats" | "globalStats_V3" | "tvlSnapshot" | "asset" | "autopilotSchedule" | "assetConfig" | "disbursement" | "splitRecipient" | "assetMapping" | "priceHistory" | "protocolInefficiencyReport" | "splitLog" | "monitoredTransaction" | "disbursementDraft" | "disbursementDraftVersion"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -3177,6 +3193,76 @@ export namespace Prisma {
           count: {
             args: Prisma.SplitLogCountArgs<ExtArgs>
             result: $Utils.Optional<SplitLogCountAggregateOutputType> | number
+          }
+        }
+      }
+      MonitoredTransaction: {
+        payload: Prisma.$MonitoredTransactionPayload<ExtArgs>
+        fields: Prisma.MonitoredTransactionFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.MonitoredTransactionFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MonitoredTransactionPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.MonitoredTransactionFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MonitoredTransactionPayload>
+          }
+          findFirst: {
+            args: Prisma.MonitoredTransactionFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MonitoredTransactionPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.MonitoredTransactionFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MonitoredTransactionPayload>
+          }
+          findMany: {
+            args: Prisma.MonitoredTransactionFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MonitoredTransactionPayload>[]
+          }
+          create: {
+            args: Prisma.MonitoredTransactionCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MonitoredTransactionPayload>
+          }
+          createMany: {
+            args: Prisma.MonitoredTransactionCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.MonitoredTransactionCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MonitoredTransactionPayload>[]
+          }
+          delete: {
+            args: Prisma.MonitoredTransactionDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MonitoredTransactionPayload>
+          }
+          update: {
+            args: Prisma.MonitoredTransactionUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MonitoredTransactionPayload>
+          }
+          deleteMany: {
+            args: Prisma.MonitoredTransactionDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.MonitoredTransactionUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.MonitoredTransactionUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$MonitoredTransactionPayload>
+          }
+          aggregate: {
+            args: Prisma.MonitoredTransactionAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateMonitoredTransaction>
+          }
+          groupBy: {
+            args: Prisma.MonitoredTransactionGroupByArgs<ExtArgs>
+            result: $Utils.Optional<MonitoredTransactionGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.MonitoredTransactionCountArgs<ExtArgs>
+            result: $Utils.Optional<MonitoredTransactionCountAggregateOutputType> | number
           }
         }
       }
@@ -31369,6 +31455,1042 @@ export namespace Prisma {
 
 
   /**
+   * Model MonitoredTransaction
+   */
+
+  export type AggregateMonitoredTransaction = {
+    _count: MonitoredTransactionCountAggregateOutputType | null
+    _avg: MonitoredTransactionAvgAggregateOutputType | null
+    _sum: MonitoredTransactionSumAggregateOutputType | null
+    _min: MonitoredTransactionMinAggregateOutputType | null
+    _max: MonitoredTransactionMaxAggregateOutputType | null
+  }
+
+  export type MonitoredTransactionAvgAggregateOutputType = {
+    bumpCount: number | null
+    maxBumps: number | null
+  }
+
+  export type MonitoredTransactionSumAggregateOutputType = {
+    bumpCount: number | null
+    maxBumps: number | null
+  }
+
+  export type MonitoredTransactionMinAggregateOutputType = {
+    id: string | null
+    txHash: string | null
+    txXdr: string | null
+    sourceAddress: string | null
+    originalFeeSt: string | null
+    currentFeeSt: string | null
+    bumpCount: number | null
+    maxBumps: number | null
+    status: string | null
+    submittedAt: Date | null
+    confirmedAt: Date | null
+    lastBumpAt: Date | null
+    errorMessage: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type MonitoredTransactionMaxAggregateOutputType = {
+    id: string | null
+    txHash: string | null
+    txXdr: string | null
+    sourceAddress: string | null
+    originalFeeSt: string | null
+    currentFeeSt: string | null
+    bumpCount: number | null
+    maxBumps: number | null
+    status: string | null
+    submittedAt: Date | null
+    confirmedAt: Date | null
+    lastBumpAt: Date | null
+    errorMessage: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type MonitoredTransactionCountAggregateOutputType = {
+    id: number
+    txHash: number
+    txXdr: number
+    sourceAddress: number
+    originalFeeSt: number
+    currentFeeSt: number
+    bumpCount: number
+    maxBumps: number
+    status: number
+    submittedAt: number
+    confirmedAt: number
+    lastBumpAt: number
+    errorMessage: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type MonitoredTransactionAvgAggregateInputType = {
+    bumpCount?: true
+    maxBumps?: true
+  }
+
+  export type MonitoredTransactionSumAggregateInputType = {
+    bumpCount?: true
+    maxBumps?: true
+  }
+
+  export type MonitoredTransactionMinAggregateInputType = {
+    id?: true
+    txHash?: true
+    txXdr?: true
+    sourceAddress?: true
+    originalFeeSt?: true
+    currentFeeSt?: true
+    bumpCount?: true
+    maxBumps?: true
+    status?: true
+    submittedAt?: true
+    confirmedAt?: true
+    lastBumpAt?: true
+    errorMessage?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type MonitoredTransactionMaxAggregateInputType = {
+    id?: true
+    txHash?: true
+    txXdr?: true
+    sourceAddress?: true
+    originalFeeSt?: true
+    currentFeeSt?: true
+    bumpCount?: true
+    maxBumps?: true
+    status?: true
+    submittedAt?: true
+    confirmedAt?: true
+    lastBumpAt?: true
+    errorMessage?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type MonitoredTransactionCountAggregateInputType = {
+    id?: true
+    txHash?: true
+    txXdr?: true
+    sourceAddress?: true
+    originalFeeSt?: true
+    currentFeeSt?: true
+    bumpCount?: true
+    maxBumps?: true
+    status?: true
+    submittedAt?: true
+    confirmedAt?: true
+    lastBumpAt?: true
+    errorMessage?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type MonitoredTransactionAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which MonitoredTransaction to aggregate.
+     */
+    where?: MonitoredTransactionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of MonitoredTransactions to fetch.
+     */
+    orderBy?: MonitoredTransactionOrderByWithRelationInput | MonitoredTransactionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: MonitoredTransactionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` MonitoredTransactions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` MonitoredTransactions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned MonitoredTransactions
+    **/
+    _count?: true | MonitoredTransactionCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: MonitoredTransactionAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: MonitoredTransactionSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: MonitoredTransactionMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: MonitoredTransactionMaxAggregateInputType
+  }
+
+  export type GetMonitoredTransactionAggregateType<T extends MonitoredTransactionAggregateArgs> = {
+        [P in keyof T & keyof AggregateMonitoredTransaction]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateMonitoredTransaction[P]>
+      : GetScalarType<T[P], AggregateMonitoredTransaction[P]>
+  }
+
+
+
+
+  export type MonitoredTransactionGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: MonitoredTransactionWhereInput
+    orderBy?: MonitoredTransactionOrderByWithAggregationInput | MonitoredTransactionOrderByWithAggregationInput[]
+    by: MonitoredTransactionScalarFieldEnum[] | MonitoredTransactionScalarFieldEnum
+    having?: MonitoredTransactionScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: MonitoredTransactionCountAggregateInputType | true
+    _avg?: MonitoredTransactionAvgAggregateInputType
+    _sum?: MonitoredTransactionSumAggregateInputType
+    _min?: MonitoredTransactionMinAggregateInputType
+    _max?: MonitoredTransactionMaxAggregateInputType
+  }
+
+  export type MonitoredTransactionGroupByOutputType = {
+    id: string
+    txHash: string
+    txXdr: string
+    sourceAddress: string
+    originalFeeSt: string
+    currentFeeSt: string
+    bumpCount: number
+    maxBumps: number
+    status: string
+    submittedAt: Date
+    confirmedAt: Date | null
+    lastBumpAt: Date | null
+    errorMessage: string | null
+    createdAt: Date
+    updatedAt: Date
+    _count: MonitoredTransactionCountAggregateOutputType | null
+    _avg: MonitoredTransactionAvgAggregateOutputType | null
+    _sum: MonitoredTransactionSumAggregateOutputType | null
+    _min: MonitoredTransactionMinAggregateOutputType | null
+    _max: MonitoredTransactionMaxAggregateOutputType | null
+  }
+
+  type GetMonitoredTransactionGroupByPayload<T extends MonitoredTransactionGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<MonitoredTransactionGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof MonitoredTransactionGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], MonitoredTransactionGroupByOutputType[P]>
+            : GetScalarType<T[P], MonitoredTransactionGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type MonitoredTransactionSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    txHash?: boolean
+    txXdr?: boolean
+    sourceAddress?: boolean
+    originalFeeSt?: boolean
+    currentFeeSt?: boolean
+    bumpCount?: boolean
+    maxBumps?: boolean
+    status?: boolean
+    submittedAt?: boolean
+    confirmedAt?: boolean
+    lastBumpAt?: boolean
+    errorMessage?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["monitoredTransaction"]>
+
+  export type MonitoredTransactionSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    txHash?: boolean
+    txXdr?: boolean
+    sourceAddress?: boolean
+    originalFeeSt?: boolean
+    currentFeeSt?: boolean
+    bumpCount?: boolean
+    maxBumps?: boolean
+    status?: boolean
+    submittedAt?: boolean
+    confirmedAt?: boolean
+    lastBumpAt?: boolean
+    errorMessage?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["monitoredTransaction"]>
+
+  export type MonitoredTransactionSelectScalar = {
+    id?: boolean
+    txHash?: boolean
+    txXdr?: boolean
+    sourceAddress?: boolean
+    originalFeeSt?: boolean
+    currentFeeSt?: boolean
+    bumpCount?: boolean
+    maxBumps?: boolean
+    status?: boolean
+    submittedAt?: boolean
+    confirmedAt?: boolean
+    lastBumpAt?: boolean
+    errorMessage?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+
+  export type $MonitoredTransactionPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "MonitoredTransaction"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      txHash: string
+      txXdr: string
+      sourceAddress: string
+      originalFeeSt: string
+      currentFeeSt: string
+      bumpCount: number
+      maxBumps: number
+      status: string
+      submittedAt: Date
+      confirmedAt: Date | null
+      lastBumpAt: Date | null
+      errorMessage: string | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["monitoredTransaction"]>
+    composites: {}
+  }
+
+  type MonitoredTransactionGetPayload<S extends boolean | null | undefined | MonitoredTransactionDefaultArgs> = $Result.GetResult<Prisma.$MonitoredTransactionPayload, S>
+
+  type MonitoredTransactionCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<MonitoredTransactionFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: MonitoredTransactionCountAggregateInputType | true
+    }
+
+  export interface MonitoredTransactionDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['MonitoredTransaction'], meta: { name: 'MonitoredTransaction' } }
+    /**
+     * Find zero or one MonitoredTransaction that matches the filter.
+     * @param {MonitoredTransactionFindUniqueArgs} args - Arguments to find a MonitoredTransaction
+     * @example
+     * // Get one MonitoredTransaction
+     * const monitoredTransaction = await prisma.monitoredTransaction.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends MonitoredTransactionFindUniqueArgs>(args: SelectSubset<T, MonitoredTransactionFindUniqueArgs<ExtArgs>>): Prisma__MonitoredTransactionClient<$Result.GetResult<Prisma.$MonitoredTransactionPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one MonitoredTransaction that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {MonitoredTransactionFindUniqueOrThrowArgs} args - Arguments to find a MonitoredTransaction
+     * @example
+     * // Get one MonitoredTransaction
+     * const monitoredTransaction = await prisma.monitoredTransaction.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends MonitoredTransactionFindUniqueOrThrowArgs>(args: SelectSubset<T, MonitoredTransactionFindUniqueOrThrowArgs<ExtArgs>>): Prisma__MonitoredTransactionClient<$Result.GetResult<Prisma.$MonitoredTransactionPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first MonitoredTransaction that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MonitoredTransactionFindFirstArgs} args - Arguments to find a MonitoredTransaction
+     * @example
+     * // Get one MonitoredTransaction
+     * const monitoredTransaction = await prisma.monitoredTransaction.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends MonitoredTransactionFindFirstArgs>(args?: SelectSubset<T, MonitoredTransactionFindFirstArgs<ExtArgs>>): Prisma__MonitoredTransactionClient<$Result.GetResult<Prisma.$MonitoredTransactionPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first MonitoredTransaction that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MonitoredTransactionFindFirstOrThrowArgs} args - Arguments to find a MonitoredTransaction
+     * @example
+     * // Get one MonitoredTransaction
+     * const monitoredTransaction = await prisma.monitoredTransaction.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends MonitoredTransactionFindFirstOrThrowArgs>(args?: SelectSubset<T, MonitoredTransactionFindFirstOrThrowArgs<ExtArgs>>): Prisma__MonitoredTransactionClient<$Result.GetResult<Prisma.$MonitoredTransactionPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more MonitoredTransactions that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MonitoredTransactionFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all MonitoredTransactions
+     * const monitoredTransactions = await prisma.monitoredTransaction.findMany()
+     * 
+     * // Get first 10 MonitoredTransactions
+     * const monitoredTransactions = await prisma.monitoredTransaction.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const monitoredTransactionWithIdOnly = await prisma.monitoredTransaction.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends MonitoredTransactionFindManyArgs>(args?: SelectSubset<T, MonitoredTransactionFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MonitoredTransactionPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a MonitoredTransaction.
+     * @param {MonitoredTransactionCreateArgs} args - Arguments to create a MonitoredTransaction.
+     * @example
+     * // Create one MonitoredTransaction
+     * const MonitoredTransaction = await prisma.monitoredTransaction.create({
+     *   data: {
+     *     // ... data to create a MonitoredTransaction
+     *   }
+     * })
+     * 
+     */
+    create<T extends MonitoredTransactionCreateArgs>(args: SelectSubset<T, MonitoredTransactionCreateArgs<ExtArgs>>): Prisma__MonitoredTransactionClient<$Result.GetResult<Prisma.$MonitoredTransactionPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many MonitoredTransactions.
+     * @param {MonitoredTransactionCreateManyArgs} args - Arguments to create many MonitoredTransactions.
+     * @example
+     * // Create many MonitoredTransactions
+     * const monitoredTransaction = await prisma.monitoredTransaction.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends MonitoredTransactionCreateManyArgs>(args?: SelectSubset<T, MonitoredTransactionCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many MonitoredTransactions and returns the data saved in the database.
+     * @param {MonitoredTransactionCreateManyAndReturnArgs} args - Arguments to create many MonitoredTransactions.
+     * @example
+     * // Create many MonitoredTransactions
+     * const monitoredTransaction = await prisma.monitoredTransaction.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many MonitoredTransactions and only return the `id`
+     * const monitoredTransactionWithIdOnly = await prisma.monitoredTransaction.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends MonitoredTransactionCreateManyAndReturnArgs>(args?: SelectSubset<T, MonitoredTransactionCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$MonitoredTransactionPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a MonitoredTransaction.
+     * @param {MonitoredTransactionDeleteArgs} args - Arguments to delete one MonitoredTransaction.
+     * @example
+     * // Delete one MonitoredTransaction
+     * const MonitoredTransaction = await prisma.monitoredTransaction.delete({
+     *   where: {
+     *     // ... filter to delete one MonitoredTransaction
+     *   }
+     * })
+     * 
+     */
+    delete<T extends MonitoredTransactionDeleteArgs>(args: SelectSubset<T, MonitoredTransactionDeleteArgs<ExtArgs>>): Prisma__MonitoredTransactionClient<$Result.GetResult<Prisma.$MonitoredTransactionPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one MonitoredTransaction.
+     * @param {MonitoredTransactionUpdateArgs} args - Arguments to update one MonitoredTransaction.
+     * @example
+     * // Update one MonitoredTransaction
+     * const monitoredTransaction = await prisma.monitoredTransaction.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends MonitoredTransactionUpdateArgs>(args: SelectSubset<T, MonitoredTransactionUpdateArgs<ExtArgs>>): Prisma__MonitoredTransactionClient<$Result.GetResult<Prisma.$MonitoredTransactionPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more MonitoredTransactions.
+     * @param {MonitoredTransactionDeleteManyArgs} args - Arguments to filter MonitoredTransactions to delete.
+     * @example
+     * // Delete a few MonitoredTransactions
+     * const { count } = await prisma.monitoredTransaction.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends MonitoredTransactionDeleteManyArgs>(args?: SelectSubset<T, MonitoredTransactionDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more MonitoredTransactions.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MonitoredTransactionUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many MonitoredTransactions
+     * const monitoredTransaction = await prisma.monitoredTransaction.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends MonitoredTransactionUpdateManyArgs>(args: SelectSubset<T, MonitoredTransactionUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one MonitoredTransaction.
+     * @param {MonitoredTransactionUpsertArgs} args - Arguments to update or create a MonitoredTransaction.
+     * @example
+     * // Update or create a MonitoredTransaction
+     * const monitoredTransaction = await prisma.monitoredTransaction.upsert({
+     *   create: {
+     *     // ... data to create a MonitoredTransaction
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the MonitoredTransaction we want to update
+     *   }
+     * })
+     */
+    upsert<T extends MonitoredTransactionUpsertArgs>(args: SelectSubset<T, MonitoredTransactionUpsertArgs<ExtArgs>>): Prisma__MonitoredTransactionClient<$Result.GetResult<Prisma.$MonitoredTransactionPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of MonitoredTransactions.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MonitoredTransactionCountArgs} args - Arguments to filter MonitoredTransactions to count.
+     * @example
+     * // Count the number of MonitoredTransactions
+     * const count = await prisma.monitoredTransaction.count({
+     *   where: {
+     *     // ... the filter for the MonitoredTransactions we want to count
+     *   }
+     * })
+    **/
+    count<T extends MonitoredTransactionCountArgs>(
+      args?: Subset<T, MonitoredTransactionCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], MonitoredTransactionCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a MonitoredTransaction.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MonitoredTransactionAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends MonitoredTransactionAggregateArgs>(args: Subset<T, MonitoredTransactionAggregateArgs>): Prisma.PrismaPromise<GetMonitoredTransactionAggregateType<T>>
+
+    /**
+     * Group by MonitoredTransaction.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {MonitoredTransactionGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends MonitoredTransactionGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: MonitoredTransactionGroupByArgs['orderBy'] }
+        : { orderBy?: MonitoredTransactionGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, MonitoredTransactionGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetMonitoredTransactionGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the MonitoredTransaction model
+   */
+  readonly fields: MonitoredTransactionFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for MonitoredTransaction.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__MonitoredTransactionClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the MonitoredTransaction model
+   */ 
+  interface MonitoredTransactionFieldRefs {
+    readonly id: FieldRef<"MonitoredTransaction", 'String'>
+    readonly txHash: FieldRef<"MonitoredTransaction", 'String'>
+    readonly txXdr: FieldRef<"MonitoredTransaction", 'String'>
+    readonly sourceAddress: FieldRef<"MonitoredTransaction", 'String'>
+    readonly originalFeeSt: FieldRef<"MonitoredTransaction", 'String'>
+    readonly currentFeeSt: FieldRef<"MonitoredTransaction", 'String'>
+    readonly bumpCount: FieldRef<"MonitoredTransaction", 'Int'>
+    readonly maxBumps: FieldRef<"MonitoredTransaction", 'Int'>
+    readonly status: FieldRef<"MonitoredTransaction", 'String'>
+    readonly submittedAt: FieldRef<"MonitoredTransaction", 'DateTime'>
+    readonly confirmedAt: FieldRef<"MonitoredTransaction", 'DateTime'>
+    readonly lastBumpAt: FieldRef<"MonitoredTransaction", 'DateTime'>
+    readonly errorMessage: FieldRef<"MonitoredTransaction", 'String'>
+    readonly createdAt: FieldRef<"MonitoredTransaction", 'DateTime'>
+    readonly updatedAt: FieldRef<"MonitoredTransaction", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * MonitoredTransaction findUnique
+   */
+  export type MonitoredTransactionFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MonitoredTransaction
+     */
+    select?: MonitoredTransactionSelect<ExtArgs> | null
+    /**
+     * Filter, which MonitoredTransaction to fetch.
+     */
+    where: MonitoredTransactionWhereUniqueInput
+  }
+
+  /**
+   * MonitoredTransaction findUniqueOrThrow
+   */
+  export type MonitoredTransactionFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MonitoredTransaction
+     */
+    select?: MonitoredTransactionSelect<ExtArgs> | null
+    /**
+     * Filter, which MonitoredTransaction to fetch.
+     */
+    where: MonitoredTransactionWhereUniqueInput
+  }
+
+  /**
+   * MonitoredTransaction findFirst
+   */
+  export type MonitoredTransactionFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MonitoredTransaction
+     */
+    select?: MonitoredTransactionSelect<ExtArgs> | null
+    /**
+     * Filter, which MonitoredTransaction to fetch.
+     */
+    where?: MonitoredTransactionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of MonitoredTransactions to fetch.
+     */
+    orderBy?: MonitoredTransactionOrderByWithRelationInput | MonitoredTransactionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for MonitoredTransactions.
+     */
+    cursor?: MonitoredTransactionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` MonitoredTransactions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` MonitoredTransactions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of MonitoredTransactions.
+     */
+    distinct?: MonitoredTransactionScalarFieldEnum | MonitoredTransactionScalarFieldEnum[]
+  }
+
+  /**
+   * MonitoredTransaction findFirstOrThrow
+   */
+  export type MonitoredTransactionFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MonitoredTransaction
+     */
+    select?: MonitoredTransactionSelect<ExtArgs> | null
+    /**
+     * Filter, which MonitoredTransaction to fetch.
+     */
+    where?: MonitoredTransactionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of MonitoredTransactions to fetch.
+     */
+    orderBy?: MonitoredTransactionOrderByWithRelationInput | MonitoredTransactionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for MonitoredTransactions.
+     */
+    cursor?: MonitoredTransactionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` MonitoredTransactions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` MonitoredTransactions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of MonitoredTransactions.
+     */
+    distinct?: MonitoredTransactionScalarFieldEnum | MonitoredTransactionScalarFieldEnum[]
+  }
+
+  /**
+   * MonitoredTransaction findMany
+   */
+  export type MonitoredTransactionFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MonitoredTransaction
+     */
+    select?: MonitoredTransactionSelect<ExtArgs> | null
+    /**
+     * Filter, which MonitoredTransactions to fetch.
+     */
+    where?: MonitoredTransactionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of MonitoredTransactions to fetch.
+     */
+    orderBy?: MonitoredTransactionOrderByWithRelationInput | MonitoredTransactionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing MonitoredTransactions.
+     */
+    cursor?: MonitoredTransactionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` MonitoredTransactions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` MonitoredTransactions.
+     */
+    skip?: number
+    distinct?: MonitoredTransactionScalarFieldEnum | MonitoredTransactionScalarFieldEnum[]
+  }
+
+  /**
+   * MonitoredTransaction create
+   */
+  export type MonitoredTransactionCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MonitoredTransaction
+     */
+    select?: MonitoredTransactionSelect<ExtArgs> | null
+    /**
+     * The data needed to create a MonitoredTransaction.
+     */
+    data: XOR<MonitoredTransactionCreateInput, MonitoredTransactionUncheckedCreateInput>
+  }
+
+  /**
+   * MonitoredTransaction createMany
+   */
+  export type MonitoredTransactionCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many MonitoredTransactions.
+     */
+    data: MonitoredTransactionCreateManyInput | MonitoredTransactionCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * MonitoredTransaction createManyAndReturn
+   */
+  export type MonitoredTransactionCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MonitoredTransaction
+     */
+    select?: MonitoredTransactionSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many MonitoredTransactions.
+     */
+    data: MonitoredTransactionCreateManyInput | MonitoredTransactionCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * MonitoredTransaction update
+   */
+  export type MonitoredTransactionUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MonitoredTransaction
+     */
+    select?: MonitoredTransactionSelect<ExtArgs> | null
+    /**
+     * The data needed to update a MonitoredTransaction.
+     */
+    data: XOR<MonitoredTransactionUpdateInput, MonitoredTransactionUncheckedUpdateInput>
+    /**
+     * Choose, which MonitoredTransaction to update.
+     */
+    where: MonitoredTransactionWhereUniqueInput
+  }
+
+  /**
+   * MonitoredTransaction updateMany
+   */
+  export type MonitoredTransactionUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update MonitoredTransactions.
+     */
+    data: XOR<MonitoredTransactionUpdateManyMutationInput, MonitoredTransactionUncheckedUpdateManyInput>
+    /**
+     * Filter which MonitoredTransactions to update
+     */
+    where?: MonitoredTransactionWhereInput
+  }
+
+  /**
+   * MonitoredTransaction upsert
+   */
+  export type MonitoredTransactionUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MonitoredTransaction
+     */
+    select?: MonitoredTransactionSelect<ExtArgs> | null
+    /**
+     * The filter to search for the MonitoredTransaction to update in case it exists.
+     */
+    where: MonitoredTransactionWhereUniqueInput
+    /**
+     * In case the MonitoredTransaction found by the `where` argument doesn't exist, create a new MonitoredTransaction with this data.
+     */
+    create: XOR<MonitoredTransactionCreateInput, MonitoredTransactionUncheckedCreateInput>
+    /**
+     * In case the MonitoredTransaction was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<MonitoredTransactionUpdateInput, MonitoredTransactionUncheckedUpdateInput>
+  }
+
+  /**
+   * MonitoredTransaction delete
+   */
+  export type MonitoredTransactionDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MonitoredTransaction
+     */
+    select?: MonitoredTransactionSelect<ExtArgs> | null
+    /**
+     * Filter which MonitoredTransaction to delete.
+     */
+    where: MonitoredTransactionWhereUniqueInput
+  }
+
+  /**
+   * MonitoredTransaction deleteMany
+   */
+  export type MonitoredTransactionDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which MonitoredTransactions to delete
+     */
+    where?: MonitoredTransactionWhereInput
+  }
+
+  /**
+   * MonitoredTransaction without action
+   */
+  export type MonitoredTransactionDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the MonitoredTransaction
+     */
+    select?: MonitoredTransactionSelect<ExtArgs> | null
+  }
+
+
+  /**
    * Model DisbursementDraft
    */
 
@@ -33840,6 +34962,27 @@ export namespace Prisma {
   export type SplitLogScalarFieldEnum = (typeof SplitLogScalarFieldEnum)[keyof typeof SplitLogScalarFieldEnum]
 
 
+  export const MonitoredTransactionScalarFieldEnum: {
+    id: 'id',
+    txHash: 'txHash',
+    txXdr: 'txXdr',
+    sourceAddress: 'sourceAddress',
+    originalFeeSt: 'originalFeeSt',
+    currentFeeSt: 'currentFeeSt',
+    bumpCount: 'bumpCount',
+    maxBumps: 'maxBumps',
+    status: 'status',
+    submittedAt: 'submittedAt',
+    confirmedAt: 'confirmedAt',
+    lastBumpAt: 'lastBumpAt',
+    errorMessage: 'errorMessage',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type MonitoredTransactionScalarFieldEnum = (typeof MonitoredTransactionScalarFieldEnum)[keyof typeof MonitoredTransactionScalarFieldEnum]
+
+
   export const DisbursementDraftScalarFieldEnum: {
     id: 'id',
     senderAddress: 'senderAddress',
@@ -36226,6 +37369,110 @@ export namespace Prisma {
     priceSource?: StringNullableWithAggregatesFilter<"SplitLog"> | string | null
     priceRecordedAt?: DateTimeNullableWithAggregatesFilter<"SplitLog"> | Date | string | null
     executedAt?: DateTimeWithAggregatesFilter<"SplitLog"> | Date | string
+  }
+
+  export type MonitoredTransactionWhereInput = {
+    AND?: MonitoredTransactionWhereInput | MonitoredTransactionWhereInput[]
+    OR?: MonitoredTransactionWhereInput[]
+    NOT?: MonitoredTransactionWhereInput | MonitoredTransactionWhereInput[]
+    id?: StringFilter<"MonitoredTransaction"> | string
+    txHash?: StringFilter<"MonitoredTransaction"> | string
+    txXdr?: StringFilter<"MonitoredTransaction"> | string
+    sourceAddress?: StringFilter<"MonitoredTransaction"> | string
+    originalFeeSt?: StringFilter<"MonitoredTransaction"> | string
+    currentFeeSt?: StringFilter<"MonitoredTransaction"> | string
+    bumpCount?: IntFilter<"MonitoredTransaction"> | number
+    maxBumps?: IntFilter<"MonitoredTransaction"> | number
+    status?: StringFilter<"MonitoredTransaction"> | string
+    submittedAt?: DateTimeFilter<"MonitoredTransaction"> | Date | string
+    confirmedAt?: DateTimeNullableFilter<"MonitoredTransaction"> | Date | string | null
+    lastBumpAt?: DateTimeNullableFilter<"MonitoredTransaction"> | Date | string | null
+    errorMessage?: StringNullableFilter<"MonitoredTransaction"> | string | null
+    createdAt?: DateTimeFilter<"MonitoredTransaction"> | Date | string
+    updatedAt?: DateTimeFilter<"MonitoredTransaction"> | Date | string
+  }
+
+  export type MonitoredTransactionOrderByWithRelationInput = {
+    id?: SortOrder
+    txHash?: SortOrder
+    txXdr?: SortOrder
+    sourceAddress?: SortOrder
+    originalFeeSt?: SortOrder
+    currentFeeSt?: SortOrder
+    bumpCount?: SortOrder
+    maxBumps?: SortOrder
+    status?: SortOrder
+    submittedAt?: SortOrder
+    confirmedAt?: SortOrderInput | SortOrder
+    lastBumpAt?: SortOrderInput | SortOrder
+    errorMessage?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type MonitoredTransactionWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    txHash?: string
+    AND?: MonitoredTransactionWhereInput | MonitoredTransactionWhereInput[]
+    OR?: MonitoredTransactionWhereInput[]
+    NOT?: MonitoredTransactionWhereInput | MonitoredTransactionWhereInput[]
+    txXdr?: StringFilter<"MonitoredTransaction"> | string
+    sourceAddress?: StringFilter<"MonitoredTransaction"> | string
+    originalFeeSt?: StringFilter<"MonitoredTransaction"> | string
+    currentFeeSt?: StringFilter<"MonitoredTransaction"> | string
+    bumpCount?: IntFilter<"MonitoredTransaction"> | number
+    maxBumps?: IntFilter<"MonitoredTransaction"> | number
+    status?: StringFilter<"MonitoredTransaction"> | string
+    submittedAt?: DateTimeFilter<"MonitoredTransaction"> | Date | string
+    confirmedAt?: DateTimeNullableFilter<"MonitoredTransaction"> | Date | string | null
+    lastBumpAt?: DateTimeNullableFilter<"MonitoredTransaction"> | Date | string | null
+    errorMessage?: StringNullableFilter<"MonitoredTransaction"> | string | null
+    createdAt?: DateTimeFilter<"MonitoredTransaction"> | Date | string
+    updatedAt?: DateTimeFilter<"MonitoredTransaction"> | Date | string
+  }, "id" | "txHash">
+
+  export type MonitoredTransactionOrderByWithAggregationInput = {
+    id?: SortOrder
+    txHash?: SortOrder
+    txXdr?: SortOrder
+    sourceAddress?: SortOrder
+    originalFeeSt?: SortOrder
+    currentFeeSt?: SortOrder
+    bumpCount?: SortOrder
+    maxBumps?: SortOrder
+    status?: SortOrder
+    submittedAt?: SortOrder
+    confirmedAt?: SortOrderInput | SortOrder
+    lastBumpAt?: SortOrderInput | SortOrder
+    errorMessage?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: MonitoredTransactionCountOrderByAggregateInput
+    _avg?: MonitoredTransactionAvgOrderByAggregateInput
+    _max?: MonitoredTransactionMaxOrderByAggregateInput
+    _min?: MonitoredTransactionMinOrderByAggregateInput
+    _sum?: MonitoredTransactionSumOrderByAggregateInput
+  }
+
+  export type MonitoredTransactionScalarWhereWithAggregatesInput = {
+    AND?: MonitoredTransactionScalarWhereWithAggregatesInput | MonitoredTransactionScalarWhereWithAggregatesInput[]
+    OR?: MonitoredTransactionScalarWhereWithAggregatesInput[]
+    NOT?: MonitoredTransactionScalarWhereWithAggregatesInput | MonitoredTransactionScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"MonitoredTransaction"> | string
+    txHash?: StringWithAggregatesFilter<"MonitoredTransaction"> | string
+    txXdr?: StringWithAggregatesFilter<"MonitoredTransaction"> | string
+    sourceAddress?: StringWithAggregatesFilter<"MonitoredTransaction"> | string
+    originalFeeSt?: StringWithAggregatesFilter<"MonitoredTransaction"> | string
+    currentFeeSt?: StringWithAggregatesFilter<"MonitoredTransaction"> | string
+    bumpCount?: IntWithAggregatesFilter<"MonitoredTransaction"> | number
+    maxBumps?: IntWithAggregatesFilter<"MonitoredTransaction"> | number
+    status?: StringWithAggregatesFilter<"MonitoredTransaction"> | string
+    submittedAt?: DateTimeWithAggregatesFilter<"MonitoredTransaction"> | Date | string
+    confirmedAt?: DateTimeNullableWithAggregatesFilter<"MonitoredTransaction"> | Date | string | null
+    lastBumpAt?: DateTimeNullableWithAggregatesFilter<"MonitoredTransaction"> | Date | string | null
+    errorMessage?: StringNullableWithAggregatesFilter<"MonitoredTransaction"> | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"MonitoredTransaction"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"MonitoredTransaction"> | Date | string
   }
 
   export type DisbursementDraftWhereInput = {
@@ -38854,6 +40101,132 @@ export namespace Prisma {
     executedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type MonitoredTransactionCreateInput = {
+    id?: string
+    txHash: string
+    txXdr: string
+    sourceAddress: string
+    originalFeeSt: string
+    currentFeeSt: string
+    bumpCount?: number
+    maxBumps?: number
+    status?: string
+    submittedAt?: Date | string
+    confirmedAt?: Date | string | null
+    lastBumpAt?: Date | string | null
+    errorMessage?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type MonitoredTransactionUncheckedCreateInput = {
+    id?: string
+    txHash: string
+    txXdr: string
+    sourceAddress: string
+    originalFeeSt: string
+    currentFeeSt: string
+    bumpCount?: number
+    maxBumps?: number
+    status?: string
+    submittedAt?: Date | string
+    confirmedAt?: Date | string | null
+    lastBumpAt?: Date | string | null
+    errorMessage?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type MonitoredTransactionUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    txHash?: StringFieldUpdateOperationsInput | string
+    txXdr?: StringFieldUpdateOperationsInput | string
+    sourceAddress?: StringFieldUpdateOperationsInput | string
+    originalFeeSt?: StringFieldUpdateOperationsInput | string
+    currentFeeSt?: StringFieldUpdateOperationsInput | string
+    bumpCount?: IntFieldUpdateOperationsInput | number
+    maxBumps?: IntFieldUpdateOperationsInput | number
+    status?: StringFieldUpdateOperationsInput | string
+    submittedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    confirmedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastBumpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MonitoredTransactionUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    txHash?: StringFieldUpdateOperationsInput | string
+    txXdr?: StringFieldUpdateOperationsInput | string
+    sourceAddress?: StringFieldUpdateOperationsInput | string
+    originalFeeSt?: StringFieldUpdateOperationsInput | string
+    currentFeeSt?: StringFieldUpdateOperationsInput | string
+    bumpCount?: IntFieldUpdateOperationsInput | number
+    maxBumps?: IntFieldUpdateOperationsInput | number
+    status?: StringFieldUpdateOperationsInput | string
+    submittedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    confirmedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastBumpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MonitoredTransactionCreateManyInput = {
+    id?: string
+    txHash: string
+    txXdr: string
+    sourceAddress: string
+    originalFeeSt: string
+    currentFeeSt: string
+    bumpCount?: number
+    maxBumps?: number
+    status?: string
+    submittedAt?: Date | string
+    confirmedAt?: Date | string | null
+    lastBumpAt?: Date | string | null
+    errorMessage?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type MonitoredTransactionUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    txHash?: StringFieldUpdateOperationsInput | string
+    txXdr?: StringFieldUpdateOperationsInput | string
+    sourceAddress?: StringFieldUpdateOperationsInput | string
+    originalFeeSt?: StringFieldUpdateOperationsInput | string
+    currentFeeSt?: StringFieldUpdateOperationsInput | string
+    bumpCount?: IntFieldUpdateOperationsInput | number
+    maxBumps?: IntFieldUpdateOperationsInput | number
+    status?: StringFieldUpdateOperationsInput | string
+    submittedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    confirmedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastBumpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type MonitoredTransactionUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    txHash?: StringFieldUpdateOperationsInput | string
+    txXdr?: StringFieldUpdateOperationsInput | string
+    sourceAddress?: StringFieldUpdateOperationsInput | string
+    originalFeeSt?: StringFieldUpdateOperationsInput | string
+    currentFeeSt?: StringFieldUpdateOperationsInput | string
+    bumpCount?: IntFieldUpdateOperationsInput | number
+    maxBumps?: IntFieldUpdateOperationsInput | number
+    status?: StringFieldUpdateOperationsInput | string
+    submittedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    confirmedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastBumpAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type DisbursementDraftCreateInput = {
     id?: string
     senderAddress: string
@@ -40731,6 +42104,70 @@ export namespace Prisma {
     _max?: NestedFloatNullableFilter<$PrismaModel>
   }
 
+  export type MonitoredTransactionCountOrderByAggregateInput = {
+    id?: SortOrder
+    txHash?: SortOrder
+    txXdr?: SortOrder
+    sourceAddress?: SortOrder
+    originalFeeSt?: SortOrder
+    currentFeeSt?: SortOrder
+    bumpCount?: SortOrder
+    maxBumps?: SortOrder
+    status?: SortOrder
+    submittedAt?: SortOrder
+    confirmedAt?: SortOrder
+    lastBumpAt?: SortOrder
+    errorMessage?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type MonitoredTransactionAvgOrderByAggregateInput = {
+    bumpCount?: SortOrder
+    maxBumps?: SortOrder
+  }
+
+  export type MonitoredTransactionMaxOrderByAggregateInput = {
+    id?: SortOrder
+    txHash?: SortOrder
+    txXdr?: SortOrder
+    sourceAddress?: SortOrder
+    originalFeeSt?: SortOrder
+    currentFeeSt?: SortOrder
+    bumpCount?: SortOrder
+    maxBumps?: SortOrder
+    status?: SortOrder
+    submittedAt?: SortOrder
+    confirmedAt?: SortOrder
+    lastBumpAt?: SortOrder
+    errorMessage?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type MonitoredTransactionMinOrderByAggregateInput = {
+    id?: SortOrder
+    txHash?: SortOrder
+    txXdr?: SortOrder
+    sourceAddress?: SortOrder
+    originalFeeSt?: SortOrder
+    currentFeeSt?: SortOrder
+    bumpCount?: SortOrder
+    maxBumps?: SortOrder
+    status?: SortOrder
+    submittedAt?: SortOrder
+    confirmedAt?: SortOrder
+    lastBumpAt?: SortOrder
+    errorMessage?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type MonitoredTransactionSumOrderByAggregateInput = {
+    bumpCount?: SortOrder
+    maxBumps?: SortOrder
+  }
+
   export type DisbursementDraftVersionListRelationFilter = {
     every?: DisbursementDraftVersionWhereInput
     some?: DisbursementDraftVersionWhereInput
@@ -41833,6 +43270,10 @@ export namespace Prisma {
      * @deprecated Use SplitLogDefaultArgs instead
      */
     export type SplitLogArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = SplitLogDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use MonitoredTransactionDefaultArgs instead
+     */
+    export type MonitoredTransactionArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = MonitoredTransactionDefaultArgs<ExtArgs>
     /**
      * @deprecated Use DisbursementDraftDefaultArgs instead
      */
