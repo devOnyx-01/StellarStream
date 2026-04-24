@@ -1,7 +1,7 @@
 // Error descriptions have been moved to ERROR_CODES.md (Issue #840).
 // Numeric codes are the on-chain surface; human-readable text lives off-chain.
 #[soroban_sdk::contracterror]
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[repr(u32)]
 pub enum Error {
     AlreadyInitialized = 1,
@@ -34,4 +34,12 @@ pub enum Error {
     TransferFailed = 26,
     // #927: whitelist
     RecipientNotWhitelisted = 27,
+    // #939: minimum payment enforcement
+    ShareBelowMinimum = 28,
+    // Previously missing variants needed for existing code
+    AlreadyProcessed = 29,
+    ContractPaused = 30,
+    InsufficientBalance = 31,
+    // #930: invalid SAC asset
+    InvalidAsset = 32,
 }

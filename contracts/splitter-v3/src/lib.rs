@@ -1,4 +1,5 @@
 #![no_std]
+use soroban_sdk::xdr::ToXdr;
 use soroban_sdk::{
     contract, contractimpl, contracttype, symbol_short, token, Address, BytesN, Env, Vec,
 };
@@ -10,6 +11,9 @@ use storage::DataKey;
 
 #[cfg(test)]
 mod test;
+
+/// Minimum payment per recipient: 1 XLM equivalent in stroops (10^7).
+const MINIMUM_PAYMENT_AMOUNT: i128 = 10_000_000;
 
 // ── Public types ─────────────────────────────────────────────────────────────
 
@@ -43,7 +47,7 @@ pub struct Proposal {
 }
 
 #[contracttype]
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum SplitStatus {
     Pending,
     Executed,
@@ -95,12 +99,20 @@ impl SplitterV3 {
         env.storage().instance().set(&DataKey::FeeBps, &fee_bps);
         env.storage().instance().set(&DataKey::Treasury, &treasury);
         env.storage().instance().set(&DataKey::StrictMode, &false);
-        env.storage().instance().set(&DataKey::NextProposalId, &0u64);
-        env.storage().instance().set(&DataKey::QuorumAdmins, &quorum_admins);
+        env.storage()
+            .instance()
+            .set(&DataKey::NextProposalId, &0u64);
+        env.storage()
+            .instance()
+            .set(&DataKey::QuorumAdmins, &quorum_admins);
         env.storage().instance().set(&DataKey::NextSplitId, &0u64);
-        env.storage().instance().set(&DataKey::CouncilKeys, &council_keys);
+        env.storage()
+            .instance()
+            .set(&DataKey::CouncilKeys, &council_keys);
         // #922: start Active
-        env.storage().instance().set(&DataKey::ContractState, &ContractState::Active);
+        env.storage()
+            .instance()
+            .set(&DataKey::ContractState, &ContractState::Active);
         Self::_set_verified(&env, &owner, true);
         for addr in quorum_admins.iter() {
             Self::_set_verified(&env, &addr, true);
@@ -110,6 +122,11 @@ impl SplitterV3 {
 
     // ── #922: Circuit-breaker ─────────────────────────────────────────────────
 
+    pub fn set_contract_state(env: Env, state: ContractState) -> Result<(), Error> {
+        Self::_require_admin(&env)?;
+        env.storage()
+            .instance()
+            .set(&DataKey::ContractState, &state);
         Self::_bump_instance_ttl(&env);
         Ok(())
     }
@@ -189,7 +206,9 @@ impl SplitterV3 {
     /// Set the protocol-level affiliate address and their fee in basis points.
     pub fn set_affiliate(env: Env, affiliate: Address, bps: u32) -> Result<(), Error> {
         Self::_require_admin(&env)?;
-        env.storage().instance().set(&DataKey::AffiliateAddress, &affiliate);
+        env.storage()
+            .instance()
+            .set(&DataKey::AffiliateAddress, &affiliate);
         env.storage().instance().set(&DataKey::AffiliateBps, &bps);
         Ok(())
     }
@@ -205,11 +224,14 @@ impl SplitterV3 {
         if amount <= 0 {
             return Err(Error::NothingToClaim);
         }
-        env.storage().persistent().set(&DataKey::PendingWithdrawal(caller.clone()), &0i128);
+        env.storage()
+            .persistent()
+            .set(&DataKey::PendingWithdrawal(caller.clone()), &0i128);
         let token_addr: Address = env.storage().instance().get(&DataKey::Token).unwrap();
         let token_client = token::Client::new(&env, &token_addr);
         token_client.transfer(&env.current_contract_address(), &caller, &amount);
-        env.events().publish((symbol_short!("aff_out"), caller), amount);
+        env.events()
+            .publish((symbol_short!("aff_out"), caller), amount);
         Ok(())
     }
 
@@ -218,7 +240,8 @@ impl SplitterV3 {
     pub fn set_verification_status(env: Env, user: Address, status: bool) -> Result<(), Error> {
         Self::_require_admin(&env)?;
         Self::_set_verified(&env, &user, status);
-        env.events().publish((symbol_short!("verified"), user.clone()), status);
+        env.events()
+            .publish((symbol_short!("verified"), user.clone()), status);
         Ok(())
     }
 
@@ -233,12 +256,24 @@ impl SplitterV3 {
     pub fn propose_change(env: Env, caller: Address, action: AdminAction) -> Result<u64, Error> {
         caller.require_auth();
         Self::_require_quorum_admin(&env, &caller)?;
-        let id: u64 = env.storage().instance().get(&DataKey::NextProposalId).unwrap_or(0);
+        let id: u64 = env
+            .storage()
+            .instance()
+            .get(&DataKey::NextProposalId)
+            .unwrap_or(0);
         let mut approvals: Vec<Address> = Vec::new(&env);
         approvals.push_back(caller);
-        let proposal = Proposal { action, approvals, executed: false };
-        env.storage().persistent().set(&DataKey::Proposal(id), &proposal);
-        env.storage().instance().set(&DataKey::NextProposalId, &(id + 1));
+        let proposal = Proposal {
+            action,
+            approvals,
+            executed: false,
+        };
+        env.storage()
+            .persistent()
+            .set(&DataKey::Proposal(id), &proposal);
+        env.storage()
+            .instance()
+            .set(&DataKey::NextProposalId, &(id + 1));
         Self::_bump_persistent_ttl(&env, &DataKey::Proposal(id));
         Self::_bump_instance_ttl(&env);
 
@@ -262,7 +297,9 @@ impl SplitterV3 {
             }
         }
         proposal.approvals.push_back(caller);
-        env.storage().persistent().set(&DataKey::Proposal(proposal_id), &proposal);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Proposal(proposal_id), &proposal);
         Ok(())
     }
 
@@ -274,19 +311,28 @@ impl SplitterV3 {
             .persistent()
             .get(&DataKey::Proposal(proposal_id))
             .ok_or(Error::ProposalNotFound)?;
-        if proposal.executed { return Err(Error::AlreadyExecuted); }
-        if proposal.approvals.len() < 2 { return Err(Error::QuorumNotReached); }
+        if proposal.executed {
+            return Err(Error::AlreadyExecuted);
+        }
+        if proposal.approvals.len() < 2 {
+            return Err(Error::QuorumNotReached);
+        }
         match proposal.action.clone() {
             AdminAction::UpdateFee(new_bps) => {
                 env.storage().instance().set(&DataKey::FeeBps, &new_bps);
             }
             AdminAction::UpdateCollector(new_treasury) => {
-                env.storage().instance().set(&DataKey::Treasury, &new_treasury);
+                env.storage()
+                    .instance()
+                    .set(&DataKey::Treasury, &new_treasury);
             }
         }
         proposal.executed = true;
-        env.storage().persistent().set(&DataKey::Proposal(proposal_id), &proposal);
-        env.events().publish((symbol_short!("settings"), proposal_id), proposal.action);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Proposal(proposal_id), &proposal);
+        env.events()
+            .publish((symbol_short!("settings"), proposal_id), proposal.action);
         Ok(())
     }
 
@@ -310,7 +356,11 @@ impl SplitterV3 {
 
         // ── Idempotency: reject replayed disbursements ────────────────────────
         let hash = Self::_compute_split_hash(&env, &sender, &recipients, total_amount, &salt)?;
-        if env.storage().temporary().has(&DataKey::ProcessedHash(hash.clone())) {
+        if env
+            .storage()
+            .temporary()
+            .has(&DataKey::ProcessedHash(hash.clone()))
+        {
             return Err(Error::AlreadyProcessed);
         }
 
@@ -319,13 +369,13 @@ impl SplitterV3 {
             .instance()
             .get(&DataKey::StrictMode)
             .unwrap_or(false);
-
-        let strict: bool = env.storage().instance().get(&DataKey::StrictMode).unwrap_or(false);
         let mut bps_sum: u32 = 0;
         for r in recipients.iter() {
             bps_sum = bps_sum.checked_add(r.share_bps).ok_or(Error::Overflow)?;
         }
-        if bps_sum != 10_000 { return Err(Error::InvalidSplit); }
+        if bps_sum != 10_000 {
+            return Err(Error::InvalidSplit);
+        }
         let token_addr: Address = env.storage().instance().get(&DataKey::Token).unwrap();
         let token_client = token::Client::new(&env, &token_addr);
         let contract_addr = env.current_contract_address();
@@ -341,46 +391,74 @@ impl SplitterV3 {
                 env.events().publish((symbol_short!("affiliate"),), a);
             }
             a
-        } else { 0 };
-        let after_affiliate = total_amount.checked_sub(affiliate_amount).ok_or(Error::Overflow)?;
+        } else {
+            0
+        };
+        let after_affiliate = total_amount
+            .checked_sub(affiliate_amount)
+            .ok_or(Error::Overflow)?;
         let fee_bps: u32 = env.storage().instance().get(&DataKey::FeeBps).unwrap_or(0);
         let fee_amount = if fee_bps > 0 {
-            let f = after_affiliate.checked_mul(fee_bps as i128).ok_or(Error::Overflow)? / 10_000;
+            let f = after_affiliate
+                .checked_mul(fee_bps as i128)
+                .ok_or(Error::Overflow)?
+                / 10_000;
             let treasury: Address = env.storage().instance().get(&DataKey::Treasury).unwrap();
-            if f > 0 { token_client.transfer(&contract_addr, &treasury, &f); }
+            if f > 0 {
+                token_client.transfer(&contract_addr, &treasury, &f);
+            }
             f
-        } else { 0 };
-        let distributable = after_affiliate.checked_sub(fee_amount).ok_or(Error::Overflow)?;
+        } else {
+            0
+        };
+        let distributable = after_affiliate
+            .checked_sub(fee_amount)
+            .ok_or(Error::Overflow)?;
         if strict {
             for r in recipients.iter() {
                 if !Self::is_verified(&env, r.address.clone()) {
                     return Err(Error::RecipientNotVerified);
                 }
             }
-            Self::_distribute(&env, &token_client, &contract_addr, &recipients, distributable)?;
+            Self::_distribute(
+                &env,
+                &token_client,
+                &contract_addr,
+                &recipients,
+                distributable,
+            )?;
         } else {
             let mut verified: Vec<Recipient> = Vec::new(&env);
             let mut verified_bps: u32 = 0;
             for r in recipients.iter() {
                 if Self::is_verified(&env, r.address.clone()) {
-                    verified_bps = verified_bps.checked_add(r.share_bps).ok_or(Error::Overflow)?;
+                    verified_bps = verified_bps
+                        .checked_add(r.share_bps)
+                        .ok_or(Error::Overflow)?;
                     verified.push_back(r);
                 }
             }
-            if verified.is_empty() { return Err(Error::NoVerifiedRecipients); }
+            if verified.is_empty() {
+                return Err(Error::NoVerifiedRecipients);
+            }
             let mut scaled: Vec<Recipient> = Vec::new(&env);
             for r in verified.iter() {
                 let new_bps = (r.share_bps as u64)
                     .checked_mul(10_000)
                     .ok_or(Error::Overflow)? as u32
                     / verified_bps;
-                scaled.push_back(Recipient { address: r.address.clone(), share_bps: new_bps });
+                scaled.push_back(Recipient {
+                    address: r.address.clone(),
+                    share_bps: new_bps,
+                });
             }
             Self::_distribute(&env, &token_client, &contract_addr, &scaled, distributable)?;
         }
 
         // ── Mark hash as processed (temporary storage, TTL ~1 day) ───────────
-        env.storage().temporary().set(&DataKey::ProcessedHash(hash), &true);
+        env.storage()
+            .temporary()
+            .set(&DataKey::ProcessedHash(hash), &true);
 
         Ok(())
     }
@@ -400,7 +478,9 @@ impl SplitterV3 {
         for r in recipients.iter() {
             bps_sum = bps_sum.checked_add(r.share_bps).ok_or(Error::Overflow)?;
         }
-        if bps_sum != 10_000 { return Err(Error::InvalidSplit); }
+        if bps_sum != 10_000 {
+            return Err(Error::InvalidSplit);
+        }
         let token_addr: Address = env.storage().instance().get(&DataKey::Token).unwrap();
         let token_client = token::Client::new(&env, &token_addr);
         token_client.transfer(&sender, &env.current_contract_address(), &total_amount);
@@ -436,54 +516,92 @@ impl SplitterV3 {
     pub fn execute_split(env: Env, split_id: u64) -> Result<(), Error> {
         Self::_require_not_paused(&env)?;
         let mut config: SplitConfig = env
-            .storage().persistent().get(&DataKey::ScheduledSplit(split_id))
+            .storage()
+            .persistent()
+            .get(&DataKey::ScheduledSplit(split_id))
             .ok_or(Error::SplitNotFound)?;
         match config.status {
             SplitStatus::Cancelled => return Err(Error::SplitAlreadyCancelled),
-            SplitStatus::Executed  => return Err(Error::SplitAlreadyExecuted),
-            SplitStatus::Pending   => {}
+            SplitStatus::Executed => return Err(Error::SplitAlreadyExecuted),
+            SplitStatus::Pending => {}
         }
-        if env.ledger().timestamp() < config.release_time { return Err(Error::NotYetReleased); }
+        if env.ledger().timestamp() < config.release_time {
+            return Err(Error::NotYetReleased);
+        }
         let token_addr: Address = env.storage().instance().get(&DataKey::Token).unwrap();
         let token_client = token::Client::new(&env, &token_addr);
         let contract_addr = env.current_contract_address();
         let fee_bps: u32 = env.storage().instance().get(&DataKey::FeeBps).unwrap_or(0);
         let fee_amount = if fee_bps > 0 {
-            let f = config.total_amount.checked_mul(fee_bps as i128).ok_or(Error::Overflow)? / 10_000;
+            let f = config
+                .total_amount
+                .checked_mul(fee_bps as i128)
+                .ok_or(Error::Overflow)?
+                / 10_000;
             let treasury: Address = env.storage().instance().get(&DataKey::Treasury).unwrap();
-            if f > 0 { token_client.transfer(&contract_addr, &treasury, &f); }
+            if f > 0 {
+                token_client.transfer(&contract_addr, &treasury, &f);
+            }
             f
-        } else { 0 };
-        let distributable = config.total_amount.checked_sub(fee_amount).ok_or(Error::Overflow)?;
-        Self::_distribute(&env, &token_client, &contract_addr, &config.recipients, distributable)?;
+        } else {
+            0
+        };
+        let distributable = config
+            .total_amount
+            .checked_sub(fee_amount)
+            .ok_or(Error::Overflow)?;
+        Self::_distribute(
+            &env,
+            &token_client,
+            &contract_addr,
+            &config.recipients,
+            distributable,
+        )?;
         config.status = SplitStatus::Executed;
-        env.storage().persistent().set(&DataKey::ScheduledSplit(split_id), &config);
+        env.storage()
+            .persistent()
+            .set(&DataKey::ScheduledSplit(split_id), &config);
         Ok(())
     }
 
     pub fn cancel_split(env: Env, caller: Address, split_id: u64) -> Result<(), Error> {
         caller.require_auth();
         let mut config: SplitConfig = env
-            .storage().persistent().get(&DataKey::ScheduledSplit(split_id))
+            .storage()
+            .persistent()
+            .get(&DataKey::ScheduledSplit(split_id))
             .ok_or(Error::SplitNotFound)?;
-        if config.sender != caller { return Err(Error::NotSplitSender); }
+        if config.sender != caller {
+            return Err(Error::NotSplitSender);
+        }
         match config.status {
             SplitStatus::Cancelled => return Err(Error::SplitAlreadyCancelled),
-            SplitStatus::Executed  => return Err(Error::SplitAlreadyExecuted),
-            SplitStatus::Pending   => {}
+            SplitStatus::Executed => return Err(Error::SplitAlreadyExecuted),
+            SplitStatus::Pending => {}
         }
-        if env.ledger().timestamp() >= config.release_time { return Err(Error::SplitNotYetDue); }
+        if env.ledger().timestamp() >= config.release_time {
+            return Err(Error::SplitNotYetDue);
+        }
         let token_addr: Address = env.storage().instance().get(&DataKey::Token).unwrap();
         let token_client = token::Client::new(&env, &token_addr);
-        token_client.transfer(&env.current_contract_address(), &config.sender, &config.total_amount);
+        token_client.transfer(
+            &env.current_contract_address(),
+            &config.sender,
+            &config.total_amount,
+        );
         config.status = SplitStatus::Cancelled;
-        env.storage().persistent().set(&DataKey::ScheduledSplit(split_id), &config);
-        env.events().publish((symbol_short!("cancel"), split_id), config.sender);
+        env.storage()
+            .persistent()
+            .set(&DataKey::ScheduledSplit(split_id), &config);
+        env.events()
+            .publish((symbol_short!("cancel"), split_id), config.sender);
         Ok(())
     }
 
     pub fn get_split(env: Env, split_id: u64) -> Option<SplitConfig> {
-        env.storage().persistent().get(&DataKey::ScheduledSplit(split_id))
+        env.storage()
+            .persistent()
+            .get(&DataKey::ScheduledSplit(split_id))
     }
 
     // ── Pull-based (claimable) splits ─────────────────────────────────────────
@@ -501,7 +619,9 @@ impl SplitterV3 {
         for r in recipients.iter() {
             bps_sum = bps_sum.checked_add(r.share_bps).ok_or(Error::Overflow)?;
         }
-        if bps_sum != 10_000 { return Err(Error::InvalidSplit); }
+        if bps_sum != 10_000 {
+            return Err(Error::InvalidSplit);
+        }
         let token_addr: Address = env.storage().instance().get(&DataKey::Token).unwrap();
         let token_client = token::Client::new(&env, &token_addr);
         let contract_addr = env.current_contract_address();
@@ -513,16 +633,38 @@ impl SplitterV3 {
                 env.events().publish((symbol_short!("affiliate"),), a);
             }
             a
-        } else { 0 };
-        let after_affiliate = total_amount.checked_sub(affiliate_amount).ok_or(Error::Overflow)?;
+        } else {
+            0
+        };
+        let after_affiliate = total_amount
+            .checked_sub(affiliate_amount)
+            .ok_or(Error::Overflow)?;
         let fee_bps: u32 = env.storage().instance().get(&DataKey::FeeBps).unwrap_or(0);
         let fee_amount = if fee_bps > 0 {
-            let f = after_affiliate.checked_mul(fee_bps as i128).ok_or(Error::Overflow)? / 10_000;
+            let f = after_affiliate
+                .checked_mul(fee_bps as i128)
+                .ok_or(Error::Overflow)?
+                / 10_000;
             let treasury: Address = env.storage().instance().get(&DataKey::Treasury).unwrap();
-            if f > 0 { token_client.transfer(&contract_addr, &treasury, &f); }
+            if f > 0 {
+                token_client.transfer(&contract_addr, &treasury, &f);
+            }
             f
-        } else { 0 };
-        let distributable = after_affiliate.checked_sub(fee_amount).ok_or(Error::Overflow)?;
+        } else {
+            0
+        };
+        let distributable = after_affiliate
+            .checked_sub(fee_amount)
+            .ok_or(Error::Overflow)?;
+        for r in recipients.iter() {
+            let share = distributable
+                .checked_mul(r.share_bps as i128)
+                .ok_or(Error::Overflow)?
+                / 10_000;
+            if share > 0 && share < MINIMUM_PAYMENT_AMOUNT {
+                return Err(Error::ShareBelowMinimum);
+            }
+        }
         for r in recipients.iter() {
             let share = distributable
                 .checked_mul(r.share_bps as i128)
@@ -532,7 +674,8 @@ impl SplitterV3 {
                 Self::_credit_claimable(&env, &r.address, &token_addr, share)?;
             }
         }
-        env.events().publish((symbol_short!("pullsplit"),), distributable);
+        env.events()
+            .publish((symbol_short!("pullsplit"),), distributable);
         Ok(())
     }
 
@@ -540,11 +683,14 @@ impl SplitterV3 {
         caller.require_auth();
         let key = DataKey::ClaimableBalance(caller.clone(), asset.clone());
         let amount: i128 = env.storage().persistent().get(&key).unwrap_or(0);
-        if amount <= 0 { return Err(Error::NothingToClaim); }
+        if amount <= 0 {
+            return Err(Error::NothingToClaim);
+        }
         env.storage().persistent().set(&key, &0i128);
         let token_client = token::Client::new(&env, &asset);
         token_client.transfer(&env.current_contract_address(), &caller, &amount);
-        env.events().publish((symbol_short!("claimed"), caller), amount);
+        env.events()
+            .publish((symbol_short!("claimed"), caller), amount);
         Ok(())
     }
 
@@ -580,9 +726,6 @@ impl SplitterV3 {
     ) -> Result<(), Error> {
         Self::_require_not_paused(&env)?;
         sender.require_auth();
-        if recipients.is_empty() { return Err(Error::EmptyRecipients); }
-
-        // Security: recipients list must not be empty.
         if recipients.is_empty() {
             return Err(Error::EmptyRecipients);
         }
@@ -606,14 +749,25 @@ impl SplitterV3 {
             }
         }
 
-        // Security: validate asset is a live token contract by calling decimals().
+        // #930: Verify asset is a valid SAC token.
+        Self::_validate_sac_asset(&env, &asset)?;
         let token_client = token::Client::new(&env, &asset);
-        let _ = token_client.decimals();
 
         // ── Pre-flight: read-only balance check before any cross-contract call ─
         Self::check_balances_bulk(&env, &token_client, &sender, total_amount)?;
 
         let contract_addr = env.current_contract_address();
+
+        // #939: Pre-check all shares meet minimum
+        for r in recipients.iter() {
+            let amount = total_amount
+                .checked_mul(r.share_bps as i128)
+                .ok_or(Error::Overflow)?
+                / 10_000;
+            if amount > 0 && amount < MINIMUM_PAYMENT_AMOUNT {
+                return Err(Error::ShareBelowMinimum);
+            }
+        }
 
         // #926: use try_transfer — panic on any failure to trigger atomic rollback.
         for r in recipients.iter() {
@@ -622,7 +776,7 @@ impl SplitterV3 {
                 .ok_or(Error::Overflow)?
                 / 10_000;
             if amount > 0 {
-                token_client
+                let _ = token_client
                     .try_transfer(&contract_addr, &r.address, &amount)
                     .map_err(|_| Error::TransferFailed)?;
             }
@@ -642,35 +796,66 @@ impl SplitterV3 {
     ) -> Result<(), Error> {
         Self::_require_not_paused(&env)?;
         sender.require_auth();
-        if recipients.is_empty() { return Err(Error::EmptyRecipients); }
+        if recipients.is_empty() {
+            return Err(Error::EmptyRecipients);
+        }
+        // #930: Verify asset is a valid SAC token.
+        Self::_validate_sac_asset(&env, &asset)?;
         let mut bps_sum: u32 = 0;
         for r in recipients.iter() {
             bps_sum = bps_sum.checked_add(r.bps).ok_or(Error::Overflow)?;
         }
-        if bps_sum != 10_000 { return Err(Error::InvalidBpsSum); }
+        if bps_sum != 10_000 {
+            return Err(Error::InvalidBpsSum);
+        }
         let token_client = token::Client::new(&env, &asset);
         let contract_addr = env.current_contract_address();
+        for i in 0..recipients.len() {
+            let r = recipients.get(i).unwrap();
+            let amount = total_amount
+                .checked_mul(r.bps as i128)
+                .ok_or(Error::Overflow)?
+                / 10_000;
+            if amount > 0 && amount < MINIMUM_PAYMENT_AMOUNT {
+                return Err(Error::ShareBelowMinimum);
+            }
+        }
         token_client.transfer(&sender, &contract_addr, &total_amount);
-        env.events().publish((symbol_short!("splitstrt"), sender.clone()), recipients.len() as u32);
+        env.events().publish(
+            (symbol_short!("splitstrt"), sender.clone()),
+            recipients.len(),
+        );
         let mut total_disbursed: i128 = 0;
         let first = recipients.get(0).unwrap();
         for i in 1..recipients.len() {
             let r = recipients.get(i).unwrap();
-            let amount = total_amount.checked_mul(r.bps as i128).ok_or(Error::Overflow)? / 10_000;
+            let amount = total_amount
+                .checked_mul(r.bps as i128)
+                .ok_or(Error::Overflow)?
+                / 10_000;
             if amount > 0 {
                 token_client.transfer(&contract_addr, &r.address, &amount);
-                env.events().publish((symbol_short!("paysent"), r.address.clone()), amount);
+                env.events()
+                    .publish((symbol_short!("paysent"), r.address.clone()), amount);
             }
             total_disbursed = total_disbursed.checked_add(amount).ok_or(Error::Overflow)?;
         }
-        let first_base = total_amount.checked_mul(first.bps as i128).ok_or(Error::Overflow)? / 10_000;
+        let first_base = total_amount
+            .checked_mul(first.bps as i128)
+            .ok_or(Error::Overflow)?
+            / 10_000;
         let dust = total_amount
-            .checked_sub(total_disbursed).ok_or(Error::Overflow)?
-            .checked_sub(first_base).ok_or(Error::Overflow)?;
+            .checked_sub(total_disbursed)
+            .ok_or(Error::Overflow)?
+            .checked_sub(first_base)
+            .ok_or(Error::Overflow)?;
         let first_amount = first_base.checked_add(dust).ok_or(Error::Overflow)?;
         if first_amount > 0 {
             token_client.transfer(&contract_addr, &first.address, &first_amount);
-            env.events().publish((symbol_short!("paysent"), first.address.clone()), first_amount);
+            env.events().publish(
+                (symbol_short!("paysent"), first.address.clone()),
+                first_amount,
+            );
         }
         Ok(())
     }
@@ -678,11 +863,16 @@ impl SplitterV3 {
     // ── Views ─────────────────────────────────────────────────────────────────
 
     pub fn is_verified(env: &Env, address: Address) -> bool {
-        env.storage().persistent().get(&DataKey::VerifiedUsers(address)).unwrap_or(false)
+        env.storage()
+            .persistent()
+            .get(&DataKey::VerifiedUsers(address))
+            .unwrap_or(false)
     }
 
     pub fn get_proposal(env: Env, proposal_id: u64) -> Option<Proposal> {
-        env.storage().persistent().get(&DataKey::Proposal(proposal_id))
+        env.storage()
+            .persistent()
+            .get(&DataKey::Proposal(proposal_id))
     }
 
     pub fn fee_bps(env: Env) -> u32 {
@@ -698,7 +888,10 @@ impl SplitterV3 {
     }
 
     pub fn council_keys(env: Env) -> Vec<Address> {
-        env.storage().instance().get(&DataKey::CouncilKeys).unwrap_or_else(|| Vec::new(&env))
+        env.storage()
+            .instance()
+            .get(&DataKey::CouncilKeys)
+            .unwrap_or_else(|| Vec::new(&env))
     }
 
     pub fn contract_state(env: Env) -> ContractState {
@@ -724,35 +917,61 @@ impl SplitterV3 {
         total_amount: i128,
     ) -> Result<(), Error> {
         let council_keys: Vec<Address> = env
-            .storage().instance().get(&DataKey::CouncilKeys)
+            .storage()
+            .instance()
+            .get(&DataKey::CouncilKeys)
             .ok_or(Error::CouncilNotSet)?;
-        for signer in council_signatures.iter() { signer.require_auth(); }
-        if council_signatures.len() < 5 { return Err(Error::InsufficientCouncilSignatures); }
+        for signer in council_signatures.iter() {
+            signer.require_auth();
+        }
+        if council_signatures.len() < 5 {
+            return Err(Error::InsufficientCouncilSignatures);
+        }
         let mut validated: u32 = 0;
         for signer in council_signatures.iter() {
             let mut count: u32 = 0;
             for other in council_signatures.iter() {
-                if other == signer { count += 1; }
+                if other == signer {
+                    count += 1;
+                }
             }
-            if count > 1 { return Err(Error::DuplicateCouncilSigner); }
+            if count > 1 {
+                return Err(Error::DuplicateCouncilSigner);
+            }
             let mut found = false;
             for key in council_keys.iter() {
-                if key == signer { found = true; break; }
+                if key == signer {
+                    found = true;
+                    break;
+                }
             }
-            if !found { return Err(Error::InvalidCouncilSigner); }
+            if !found {
+                return Err(Error::InvalidCouncilSigner);
+            }
             validated += 1;
         }
-        if validated < 5 { return Err(Error::InsufficientCouncilSignatures); }
+        if validated < 5 {
+            return Err(Error::InsufficientCouncilSignatures);
+        }
         let mut bps_sum: u32 = 0;
         for r in recipients.iter() {
             bps_sum = bps_sum.checked_add(r.share_bps).ok_or(Error::Overflow)?;
         }
-        if bps_sum != 10_000 { return Err(Error::InvalidSplit); }
+        if bps_sum != 10_000 {
+            return Err(Error::InvalidSplit);
+        }
         let token_addr: Address = env.storage().instance().get(&DataKey::Token).unwrap();
         let token_client = token::Client::new(&env, &token_addr);
         let contract_addr = env.current_contract_address();
-        Self::_distribute(&env, &token_client, &contract_addr, &recipients, total_amount)?;
-        env.events().publish((symbol_short!("recovery"),), total_amount);
+        Self::_distribute(
+            &env,
+            &token_client,
+            &contract_addr,
+            &recipients,
+            total_amount,
+        )?;
+        env.events()
+            .publish((symbol_short!("recovery"),), total_amount);
         Ok(())
     }
 
@@ -771,9 +990,20 @@ impl SplitterV3 {
         Ok(())
     }
 
+    /// #930: Validate that `asset` is a live SAC-compatible token contract.
+    /// Attempts a `symbol()` call; if the contract at that address doesn't
+    /// implement the Stellar token interface the call will fail.
+    fn _validate_sac_asset(env: &Env, asset: &Address) -> Result<(), Error> {
+        let client = token::Client::new(env, asset);
+        let _ = client.try_symbol().map_err(|_| Error::InvalidAsset)?;
+        Ok(())
+    }
+
     fn _require_admin(env: &Env) -> Result<(), Error> {
         let admin: Address = env
-            .storage().instance().get(&DataKey::Admin)
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
             .ok_or(Error::NotAdmin)?;
         admin.require_auth();
         Ok(())
@@ -781,25 +1011,69 @@ impl SplitterV3 {
 
     fn _require_quorum_admin(env: &Env, caller: &Address) -> Result<(), Error> {
         let admins: Vec<Address> = env
-            .storage().instance().get(&DataKey::QuorumAdmins)
+            .storage()
+            .instance()
+            .get(&DataKey::QuorumAdmins)
             .ok_or(Error::NotAuthorizedAdmin)?;
         for a in admins.iter() {
-            if a == *caller { return Ok(()); }
+            if a == *caller {
+                return Ok(());
+            }
         }
         Err(Error::NotAuthorizedAdmin)
     }
 
     fn _set_verified(env: &Env, user: &Address, status: bool) {
-        env.storage().persistent().set(&DataKey::VerifiedUsers(user.clone()), &status);
+        env.storage()
+            .persistent()
+            .set(&DataKey::VerifiedUsers(user.clone()), &status);
     }
 
-    fn _credit_claimable(env: &Env, recipient: &Address, asset: &Address, amount: i128) -> Result<(), Error> {
+    fn _credit_claimable(
+        env: &Env,
+        recipient: &Address,
+        asset: &Address,
+        amount: i128,
+    ) -> Result<(), Error> {
         let key = DataKey::ClaimableBalance(recipient.clone(), asset.clone());
         let current: i128 = env.storage().persistent().get(&key).unwrap_or(0);
         let updated = current.checked_add(amount).ok_or(Error::Overflow)?;
         env.storage().persistent().set(&key, &updated);
         Self::_bump_persistent_ttl(env, &key);
         Ok(())
+    }
+
+    fn check_balances_bulk(
+        _env: &Env,
+        token_client: &token::Client,
+        sender: &Address,
+        total_amount: i128,
+    ) -> Result<(), Error> {
+        let balance = token_client.balance(sender);
+        if balance < total_amount {
+            return Err(Error::InsufficientBalance);
+        }
+        Ok(())
+    }
+
+    fn _compute_split_hash(
+        env: &Env,
+        sender: &Address,
+        recipients: &Vec<Recipient>,
+        total_amount: i128,
+        salt: &BytesN<32>,
+    ) -> Result<BytesN<32>, Error> {
+        let mut payload = soroban_sdk::Bytes::new(env);
+        payload.append(&sender.to_xdr(env));
+        for r in recipients.iter() {
+            payload.append(&r.address.to_xdr(env));
+        }
+        payload.append(&soroban_sdk::Bytes::from_slice(
+            env,
+            &total_amount.to_be_bytes(),
+        ));
+        payload.append(&salt.to_xdr(env));
+        Ok(env.crypto().sha256(&payload).into())
     }
 
     fn _distribute(
@@ -814,11 +1088,21 @@ impl SplitterV3 {
                 .checked_mul(r.share_bps as i128)
                 .ok_or(Error::Overflow)?
                 / 10_000;
+            if amount > 0 && amount < MINIMUM_PAYMENT_AMOUNT {
+                return Err(Error::ShareBelowMinimum);
+            }
+        }
+        for r in recipients.iter() {
+            let amount = distributable
+                .checked_mul(r.share_bps as i128)
+                .ok_or(Error::Overflow)?
+                / 10_000;
             if amount > 0 {
                 token_client.transfer(from, &r.address, &amount);
             }
         }
-        env.events().publish((symbol_short!("split"),), distributable);
+        env.events()
+            .publish((symbol_short!("split"),), distributable);
         Ok(())
     }
 
@@ -832,6 +1116,8 @@ impl SplitterV3 {
 
     /// Bump a single persistent storage entry TTL.
     fn _bump_persistent_ttl(env: &Env, key: &DataKey) {
-        env.storage().persistent().extend_ttl(key, 3_110_400, 6_220_800);
+        env.storage()
+            .persistent()
+            .extend_ttl(key, 3_110_400, 6_220_800);
     }
 }
